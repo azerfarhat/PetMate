@@ -1,0 +1,19 @@
+# Secrets : jamais copiés dans l'image
+.env
+*.pem
+
+# Build / IDE
+.gradle
+build
+target
+.idea
+*.iml
+.vscode
+
+# VCS
+.git
+.gitignore
+
+# Docs
+HELP.md
+README.md
