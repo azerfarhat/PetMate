@@ -1,8 +1,6 @@
 package com.petmate.backend.auth;
 
 import com.petmate.backend.auth.dto.MessageResponse;
-import com.petmate.backend.auth.dto.PetPhotoRequest;
-import com.petmate.backend.auth.dto.PetRequest;
 import com.petmate.backend.auth.dto.RegisterRequest;
 import com.petmate.backend.auth.dto.ResendVerificationRequest;
 import com.petmate.backend.config.AppProperties;
@@ -24,6 +22,8 @@ import com.petmate.backend.repository.EmailVerificationTokenRepository;
 import com.petmate.backend.repository.PetPhotoRepository;
 import com.petmate.backend.repository.PetRepository;
 import com.petmate.backend.repository.UserRepository;
+import com.petmate.backend.user.dto.PetRequest;
+import com.petmate.backend.user.dto.PhotoUpdateRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -168,7 +168,7 @@ class RegistrationServiceTest {
         PetRequest pet = new PetRequest(
                 "Rex", PetType.DOG, "Labrador", PetGender.MALE, 2, EnergyLevel.HIGH,
                 "Câlin", true, true,
-                List.of(new PetPhotoRequest("https://cdn.pawmate.app/rex.jpg", true, 0)));
+                List.of(new PhotoUpdateRequest(null, "https://cdn.pawmate.app/rex.jpg", true, 0)));
 
         registrationService.register(validRequest(List.of(pet)));
 
@@ -210,6 +210,7 @@ class RegistrationServiceTest {
 
         assertEquals("Adresse email vérifiée avec succès", response.message());
         assertEquals(true, user.isEmailVerified());
+        assertEquals(true, user.isActive());
         verify(userRepository).save(user);
         verify(verificationTokenRepository).save(token);
         org.junit.jupiter.api.Assertions.assertTrue(token.isUsed());

@@ -1,7 +1,6 @@
 package com.petmate.backend.auth;
 
 import com.petmate.backend.auth.dto.AuthResponse;
-import com.petmate.backend.auth.dto.ChangePasswordRequest;
 import com.petmate.backend.auth.dto.LoginRequest;
 import com.petmate.backend.auth.dto.LogoutRequest;
 import com.petmate.backend.auth.dto.MessageResponse;
@@ -17,10 +16,8 @@ import com.petmate.backend.security.jwt.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,20 +32,17 @@ public class AuthService {
     private final RefreshTokenStore refreshTokenStore;
     private final UserRepository userRepository;
     private final LoginAttemptService loginAttemptService;
-    private final PasswordEncoder passwordEncoder;
 
     public AuthService(AuthenticationManager authenticationManager,
                        JwtService jwtService,
                        RefreshTokenStore refreshTokenStore,
                        UserRepository userRepository,
-                       LoginAttemptService loginAttemptService,
-                       PasswordEncoder passwordEncoder) {
+                       LoginAttemptService loginAttemptService) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.refreshTokenStore = refreshTokenStore;
         this.userRepository = userRepository;
         this.loginAttemptService = loginAttemptService;
-        this.passwordEncoder = passwordEncoder;
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -70,21 +64,6 @@ public class AuthService {
 
         User user = ((AuthUserPrincipal) authentication.getPrincipal()).getUser();
         return issueTokens(user, request.isRememberMe());
-    }
-
-    @Transactional
-    public MessageResponse changePassword(AuthUserPrincipal principal, ChangePasswordRequest request) {
-        User user = userRepository.findById(principal.getUserId())
-                .orElseThrow(() -> new com.petmate.backend.exception.UserNotFoundException("Utilisateur introuvable"));
-
-        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-            throw new BadCredentialsException("Mot de passe actuel incorrect");
-        }
-
-        user.setPassword(passwordEncoder.encode(request.newPassword()));
-        userRepository.save(user);
-
-        return new MessageResponse("Mot de passe modifié avec succès");
     }
 
     @Transactional

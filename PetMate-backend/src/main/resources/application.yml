@@ -49,6 +49,8 @@ app:
   rate-limit:
     register-max-per-window: ${REGISTER_MAX_PER_WINDOW:5}
     register-window-minutes: ${REGISTER_WINDOW_MINUTES:60}
+  match:
+    re-match-cooldown-days: ${RE_MATCH_COOLDOWN_DAYS:15}
 
 management:
   endpoints:

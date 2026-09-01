@@ -41,7 +41,7 @@ class PetRemoteDataSource {
   }
 
   Future<PetResponseDto> updatePet(String petId, UpdatePetRequestDto dto) async {
-    final response = await _apiClient.patch(
+    final response = await _apiClient.put(
       '${ApiConstants.petsBasePath}/$petId',
       body: dto.toJson(),
     );

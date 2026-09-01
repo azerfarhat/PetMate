@@ -16,7 +16,9 @@ public class AppProperties {
     private Mail mail = new Mail();
     private Verification verification = new Verification();
     private PasswordReset passwordReset = new PasswordReset();
+    private PasswordChange passwordChange = new PasswordChange();
     private RateLimit rateLimit = new RateLimit();
+    private MatchProperties match = new MatchProperties();
 
     @Getter
     @Setter
@@ -47,10 +49,30 @@ public class AppProperties {
 
     @Getter
     @Setter
+    public static class PasswordChange {
+        /** Durée de validité d'un code de changement de mot de passe, en minutes. */
+        private long tokenExpirationMinutes = 60;
+        /** Délai minimal entre deux demandes de code pour un même utilisateur, en secondes. */
+        private long cooldownSeconds = 60;
+    }
+
+    @Getter
+    @Setter
     public static class RateLimit {
         /** Nombre maximal de créations de compte autorisé par IP sur la fenêtre glissante. */
         private int registerMaxPerWindow = 5;
         /** Durée de la fenêtre glissante du rate-limit d'inscription, en minutes. */
         private long registerWindowMinutes = 60;
+    }
+
+    @Getter
+    @Setter
+    public static class MatchProperties {
+        /**
+         * Délai avant qu'une Pet supprimée (match UNMATCHED) puisse réapparaître
+         * et re-matcher avec la même personne. Hors de ce délai, la Pet est
+         * simplement masquée du feed — aucun message de refus n'est envoyé.
+         */
+        private int reMatchCooldownDays = 15;
     }
 }

@@ -1,7 +1,6 @@
 package com.petmate.backend.auth;
 
 import com.petmate.backend.auth.dto.AuthResponse;
-import com.petmate.backend.auth.dto.ChangePasswordRequest;
 import com.petmate.backend.auth.dto.ForgotPasswordRequest;
 import com.petmate.backend.auth.dto.LoginRequest;
 import com.petmate.backend.auth.dto.LogoutRequest;
@@ -11,13 +10,11 @@ import com.petmate.backend.auth.dto.RegisterRequest;
 import com.petmate.backend.auth.dto.ResendVerificationRequest;
 import com.petmate.backend.auth.dto.ResetPasswordRequest;
 import com.petmate.backend.auth.dto.VerifyCodeRequest;
-import com.petmate.backend.security.AuthUserPrincipal;
 import com.petmate.backend.security.RegistrationRateLimitService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -84,13 +81,6 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<MessageResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         return ResponseEntity.ok(passwordResetService.resetPassword(request));
-    }
-
-    @PostMapping("/change-password")
-    public ResponseEntity<MessageResponse> changePassword(Authentication authentication,
-                                                          @Valid @RequestBody ChangePasswordRequest request) {
-        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
-        return ResponseEntity.ok(authService.changePassword(principal, request));
     }
 
     @PostMapping("/refresh")

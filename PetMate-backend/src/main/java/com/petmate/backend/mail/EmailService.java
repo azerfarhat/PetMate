@@ -63,6 +63,28 @@ public class EmailService {
     }
 
     /**
+     * Envoie le code à 6 chiffres pour confirmer un changement de mot de passe,
+     * avec la même charte graphique que le code de vérification d'email.
+     */
+    public void sendPasswordChangeCodeEmail(User user, String code, long expirationMinutes) {
+        String html = PASSWORD_CHANGE_HTML_TEMPLATE
+                .replace("__PASSWORD_CHANGE_CODE__", code)
+                .replace("__EXPIRATION_MINUTES__", String.valueOf(expirationMinutes));
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+            helper.setFrom(appProperties.getMail().getFrom());
+            helper.setTo(user.getEmail());
+            helper.setSubject("PawMate — Code de changement de mot de passe");
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (MessagingException | MailException e) {
+            throw new EmailDeliveryException("Impossible d'envoyer le code de changement de mot de passe");
+        }
+    }
+
+    /**
      * Construit le lien de vérification. Si un schéma de deep-link mobile est
      * configuré (ex. "pawmate"), on génère un lien custom que l'app sait ouvrir
      * (pawmate://verify), sinon on retombe sur le lien web classique.
@@ -99,6 +121,110 @@ public class EmailService {
                 .replace("__RESET_URL__", link)
                 .replace("__EXPIRATION_MINUTES__", String.valueOf(expirationMinutes));
     }
+
+    private static final String PASSWORD_CHANGE_HTML_TEMPLATE = """
+            <!DOCTYPE html>
+            <html lang="fr" xmlns="http://www.w3.org/1999/xhtml">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <meta http-equiv="X-UA-Compatible" content="IE=edge">
+              <title>PawMate — Changement de mot de passe</title>
+            </head>
+            <body style="margin:0; padding:0; background-color:#FFF9F3;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#FFF9F3; padding:32px 16px;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                           style="max-width:600px; background-color:#FFFFFF; border-radius:14px; overflow:hidden;
+                                  border:1px solid #F4B860;">
+                      <tr>
+                        <td align="center" style="padding:36px 36px 20px 36px;">
+                          <div style="font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:28px; font-weight:800;
+                                      color:#E9785B; letter-spacing:1px;">PawMate</div>
+                          <div style="font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; font-weight:600;
+                                      color:#8FAF9A; letter-spacing:4px; margin-top:4px;">TROUVEZ LE COMPAGNON IDÉAL</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px 36px;">
+                          <div style="height:4px; background-color:#F4B860; border-radius:2px;"></div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td align="center" style="padding:28px 36px 8px 36px;">
+                          <h1 style="margin:0; font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px;
+                                     font-weight:700; color:#243447;">Changez votre mot de passe</h1>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td align="center" style="padding:16px 36px 8px 36px;">
+                          <p style="margin:0; font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px;
+                                    line-height:1.6; color:#243447;">
+                            Vous avez demandé à changer votre mot de passe PawMate.
+                          </p>
+                          <p style="margin:12px 0 0 0; font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:15px;
+                                    line-height:1.6; color:#243447;">
+                            Saisissez ce code dans l'application pour confirmer le changement :
+                          </p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td align="center" style="padding:20px 36px 0 36px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0"
+                                 style="border-collapse:collapse; background-color:#FFF9F3; border:2px dashed #E9785B;
+                                        border-radius:10px;">
+                            <tr>
+                              <td align="center" style="padding:18px 40px;
+                                                         font-family:Consolas,'Courier New',monospace; font-size:32px;
+                                                         font-weight:700; letter-spacing:8px; color:#243447;">
+                                __PASSWORD_CHANGE_CODE__
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td align="center" style="padding:10px 36px 8px 36px;">
+                          <p style="margin:0; font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px;
+                                    color:#8FAF9A;">
+                            Code à 6 chiffres, à saisir dans l'application.
+                          </p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td align="center" style="padding:8px 36px 8px 36px;">
+                          <p style="margin:0; font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px;
+                                    color:#8FAF9A;">
+                            Ce code est valable pendant __EXPIRATION_MINUTES__ minutes.
+                          </p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td align="center" style="padding:0 36px 24px 36px;">
+                          <p style="margin:0; font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:13px;
+                                    line-height:1.5; color:#8FAF9A;">
+                            Si vous n'êtes pas à l'origine de cette demande, ignorez cet email : votre mot de
+                            passe actuel reste inchangé.
+                          </p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="background-color:#243447; padding:20px 36px;">
+                          <p style="margin:0; font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:13px;
+                                    color:#8FAF9A; text-align:center;">
+                            PawMate &copy; — Des animaux heureux, des humains comblés.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+            """;
 
     private static final String VERIFICATION_HTML_TEMPLATE = """
             <!DOCTYPE html>

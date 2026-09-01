@@ -37,6 +37,15 @@ public class RefreshTokenStore {
                 : new StoredToken(value.jti(), value.userId(), value.expiresAt(), true));
     }
 
+    /**
+     * Révoque tous les Refresh Tokens d'un utilisateur (suppression de compte,
+     * changement de mot de passe). Idempotent.
+     */
+    public void revokeAllForUser(Long userId) {
+        purgeExpired();
+        tokens.entrySet().removeIf(entry -> userId.equals(entry.getValue().userId()));
+    }
+
     public Optional<Long> findUserId(String jti) {
         StoredToken stored = tokens.get(jti);
         return stored == null ? Optional.empty() : Optional.ofNullable(stored.userId());

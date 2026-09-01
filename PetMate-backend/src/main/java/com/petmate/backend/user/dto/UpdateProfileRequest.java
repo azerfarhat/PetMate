@@ -1,23 +1,21 @@
-package com.petmate.backend.auth.dto;
+package com.petmate.backend.user.dto;
 
-import com.petmate.backend.user.dto.PetRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
 /**
- * Données d'inscription d'un Owner : informations du User + mot de passe +
- * au moins un Pet. Aucune entité JPA n'est exposée.
+ * Mise à jour du profil d'un utilisateur connecté : champs personnels + liste
+ * complète de ses Pet. La liste est remplacée atomiquement (ajout, modification
+ * ou suppression de Pet) et doit toujours contenir au moins un Pet.
  */
-public record RegisterRequest(
+public record UpdateProfileRequest(
 
         @NotBlank
         @Size(max = 100)
@@ -26,18 +24,6 @@ public record RegisterRequest(
         @NotBlank
         @Size(max = 100)
         String lastName,
-
-        @NotBlank
-        @Email
-        @Size(max = 255)
-        String email,
-
-        @NotBlank
-        @Size(min = 8, max = 128)
-        @Pattern(
-                regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$",
-                message = "Le mot de passe doit contenir au moins une lettre, un chiffre et un caractère spécial")
-        String password,
 
         @Size(max = 2048)
         String profilePicture,
@@ -58,9 +44,9 @@ public record RegisterRequest(
 
         @NotEmpty
         @Valid
-        List<PetRequest> pets) {
+        List<PetUpdateRequest> pets) {
 
-    public RegisterRequest {
+    public UpdateProfileRequest {
         pets = pets == null ? List.of() : List.copyOf(pets);
     }
 }

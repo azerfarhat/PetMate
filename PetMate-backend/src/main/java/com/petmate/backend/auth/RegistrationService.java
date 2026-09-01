@@ -1,8 +1,6 @@
 package com.petmate.backend.auth;
 
 import com.petmate.backend.auth.dto.MessageResponse;
-import com.petmate.backend.auth.dto.PetPhotoRequest;
-import com.petmate.backend.auth.dto.PetRequest;
 import com.petmate.backend.auth.dto.RegisterRequest;
 import com.petmate.backend.auth.dto.ResendVerificationRequest;
 import com.petmate.backend.config.AppProperties;
@@ -20,6 +18,8 @@ import com.petmate.backend.repository.EmailVerificationTokenRepository;
 import com.petmate.backend.repository.PetPhotoRepository;
 import com.petmate.backend.repository.PetRepository;
 import com.petmate.backend.repository.UserRepository;
+import com.petmate.backend.user.dto.PetRequest;
+import com.petmate.backend.user.dto.PhotoUpdateRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -116,6 +116,8 @@ public class RegistrationService {
 
         User user = verificationToken.getUser();
         user.setEmailVerified(true);
+        user.setActive(true);
+        user.getPets().forEach(pet -> pet.setActive(true));
         userRepository.save(user);
 
         verificationToken.setUsed(true);
@@ -177,11 +179,11 @@ public class RegistrationService {
         }
     }
 
-    private void persistPhotos(Pet pet, List<PetPhotoRequest> photoRequests) {
+    private void persistPhotos(Pet pet, List<PhotoUpdateRequest> photoRequests) {
         if (photoRequests == null || photoRequests.isEmpty()) {
             return;
         }
-        for (PetPhotoRequest photoRequest : photoRequests) {
+        for (PhotoUpdateRequest photoRequest : photoRequests) {
             PetPhoto photo = PetPhoto.builder()
                     .url(photoRequest.url())
                     .primaryPhoto(photoRequest.primaryPhoto())

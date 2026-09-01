@@ -17,7 +17,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "swipes")
+@Table(name = "swipes",
+        uniqueConstraints = @UniqueConstraint(name = "uk_swipe_user_pet",
+                columnNames = {"user_id", "pet_id"}))
 public class Swipe {
 
     @Id
