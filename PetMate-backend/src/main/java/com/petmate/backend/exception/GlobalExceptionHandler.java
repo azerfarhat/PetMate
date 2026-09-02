@@ -60,6 +60,16 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(ConversationNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleConversationNotFound(ConversationNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(NotificationNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotificationNotFound(NotificationNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(VerificationRequiredException.class)
     public ResponseEntity<ErrorResponse> handleVerificationRequired(VerificationRequiredException ex, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, "Forbidden", ex.getMessage(), request);

@@ -13,8 +13,10 @@ public interface PetPhotoRepository extends JpaRepository<PetPhoto, Long> {
 
     /**
      * Photos de plusieurs Pet en une seule requête (évite le N+1 sur le feed).
+     * Le Pet est chargé (fetch join) : l'indexation côté service ne déclenche
+     * aucun chargement paresseux.
      */
-    @Query("SELECT pp FROM PetPhoto pp WHERE pp.pet.id IN :petIds")
+    @Query("SELECT pp FROM PetPhoto pp JOIN FETCH pp.pet WHERE pp.pet.id IN :petIds")
     List<PetPhoto> findByPetIds(@Param("petIds") Collection<Long> petIds);
 
     /**
