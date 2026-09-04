@@ -451,6 +451,10 @@ class MatchServiceTest {
                 .build();
 
         when(matchRepository.findForUser(ME_ID)).thenReturn(List.of(matched, unmatched));
+        when(petPhotoRepository.findByPetIds(anyCollection()))
+                .thenReturn(List.of(
+                        myPet.getPhotos().get(0),
+                        otherPet.getPhotos().get(0)));
 
         List<MatchResponse> response = matchService.myMatches(ME_ID);
 

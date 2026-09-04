@@ -33,8 +33,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -150,10 +152,47 @@ public class MatchService {
      */
     @Transactional(readOnly = true)
     public List<MatchResponse> myMatches(Long userId) {
-        return matchRepository.findForUser(userId).stream()
+        List<Match> matches = matchRepository.findForUser(userId).stream()
                 .filter(match -> match.getStatus() == MatchStatus.MATCHED)
+                .toList();
+        if (matches.isEmpty()) {
+            return List.of();
+        }
+        attachPhotos(matches);
+        return matches.stream()
                 .map(this::toMatchResponse)
                 .toList();
+    }
+
+    /**
+     * Charge les photos des deux Pets de chaque match en une seule requête
+     * groupée, puis les attache aux Pets. Cela évite à la fois le N+1 et le
+     * "MultipleBagFetchException" (les collections List de photos de pet1 et
+     * de pet2 ne peuvent pas être fetch-ées en même temps en une requête).
+     */
+    private void attachPhotos(List<Match> matches) {
+        Set<Long> petIds = new HashSet<>();
+        for (Match match : matches) {
+            if (match.getPet1() != null) {
+                petIds.add(match.getPet1().getId());
+            }
+            if (match.getPet2() != null) {
+                petIds.add(match.getPet2().getId());
+            }
+        }
+        if (petIds.isEmpty()) {
+            return;
+        }
+        Map<Long, List<PetPhoto>> photosByPetId = petPhotoRepository.findByPetIds(petIds).stream()
+                .collect(Collectors.groupingBy(photo -> photo.getPet().getId()));
+        for (Match match : matches) {
+            if (match.getPet1() != null) {
+                match.getPet1().setPhotos(photosByPetId.getOrDefault(match.getPet1().getId(), List.of()));
+            }
+            if (match.getPet2() != null) {
+                match.getPet2().setPhotos(photosByPetId.getOrDefault(match.getPet2().getId(), List.of()));
+            }
+        }
     }
 
     /**

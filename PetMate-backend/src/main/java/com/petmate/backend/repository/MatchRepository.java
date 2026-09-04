@@ -28,14 +28,16 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
     List<Match> findByPetPair(@Param("pet1Id") Long pet1Id, @Param("pet2Id") Long pet2Id);
 
     /**
-     * Matchs d'un utilisateur avec leurs Pets (photos) chargés en une requête.
+     * Matchs d'un utilisateur avec leurs deux Pets chargés en une requête.
+     * Les photos ne sont PAS fetch ici : deux collections List (photos de
+     * pet1 et photos de pet2) ne peuvent pas être fetch-ées ensemble en une
+     * requête (MultipleBagFetchException). Le service les charge ensuite en
+     * une 2e requête groupée via {@code PetPhotoRepository#findByPetIds}.
      */
     @Query("""
             SELECT DISTINCT m FROM Match m
             LEFT JOIN FETCH m.pet1 p1
-            LEFT JOIN FETCH p1.photos
             LEFT JOIN FETCH m.pet2 p2
-            LEFT JOIN FETCH p2.photos
             WHERE m.user1.id = :userId OR m.user2.id = :userId
             ORDER BY m.matchedAt DESC
             """)
