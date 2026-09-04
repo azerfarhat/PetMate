@@ -5,6 +5,7 @@ import com.petmate.backend.entity.User;
 import com.petmate.backend.exception.PetNotFoundException;
 import com.petmate.backend.exception.RegistrationException;
 import com.petmate.backend.exception.UserNotFoundException;
+import com.petmate.backend.repository.BlockRepository;
 import com.petmate.backend.repository.PetRepository;
 import com.petmate.backend.repository.UserRepository;
 import com.petmate.backend.user.dto.PetRequest;
@@ -29,13 +30,16 @@ public class PetService {
     private final PetRepository petRepository;
     private final UserRepository userRepository;
     private final PetPhotoApplier petPhotoApplier;
+    private final BlockRepository blockRepository;
 
     public PetService(PetRepository petRepository,
                       UserRepository userRepository,
-                      PetPhotoApplier petPhotoApplier) {
+                      PetPhotoApplier petPhotoApplier,
+                      BlockRepository blockRepository) {
         this.petRepository = petRepository;
         this.userRepository = userRepository;
         this.petPhotoApplier = petPhotoApplier;
+        this.blockRepository = blockRepository;
     }
 
     /**
@@ -43,6 +47,27 @@ public class PetService {
      */
     @Transactional(readOnly = true)
     public List<PetResponse> listOwnedPets(Long ownerId) {
+        return petRepository.findAllActiveByOwnerIdWithPhotos(ownerId).stream()
+                .map(UserProfileMapper::toPetResponse)
+                .toList();
+    }
+
+    /**
+     * Pet actifs publics d'un membre actif, pour le profil d'un tiers
+     * (match, like, découverte). Aucune donnée privée n'est exposée.
+     * Retourne 404 si le compte est inconnu/inactif ou si l'un des deux a
+     * bloqué l'autre (le profil "n'existe pas"), id == viewer autorisé pour
+     * revenir sur ses propres Pet.
+     */
+    @Transactional(readOnly = true)
+    public List<PetResponse> listPublicPets(Long viewerId, Long ownerId) {
+        User owner = userRepository.findByIdAndActiveTrue(ownerId)
+                .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable"));
+
+        if (!ownerId.equals(viewerId) && blockRepository.existBetweenOwners(viewerId, ownerId)) {
+            throw new UserNotFoundException("Utilisateur introuvable");
+        }
+
         return petRepository.findAllActiveByOwnerIdWithPhotos(ownerId).stream()
                 .map(UserProfileMapper::toPetResponse)
                 .toList();

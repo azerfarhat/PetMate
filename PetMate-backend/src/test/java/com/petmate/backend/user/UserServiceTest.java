@@ -14,6 +14,7 @@ import com.petmate.backend.exception.RateLimitExceededException;
 import com.petmate.backend.exception.RegistrationException;
 import com.petmate.backend.exception.UserNotFoundException;
 import com.petmate.backend.mail.EmailService;
+import com.petmate.backend.repository.BlockRepository;
 import com.petmate.backend.repository.PasswordChangeTokenRepository;
 import com.petmate.backend.repository.PetPhotoRepository;
 import com.petmate.backend.repository.PetRepository;
@@ -22,6 +23,7 @@ import com.petmate.backend.security.RefreshTokenStore;
 import com.petmate.backend.user.dto.PasswordChangeRequest;
 import com.petmate.backend.user.dto.PhotoUpdateRequest;
 import com.petmate.backend.user.dto.PetUpdateRequest;
+import com.petmate.backend.user.dto.PublicUserResponse;
 import com.petmate.backend.user.dto.UpdateProfileRequest;
 import com.petmate.backend.user.dto.UserResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +55,7 @@ import static org.mockito.Mockito.when;
 class UserServiceTest {
 
     private static final long USER_ID = 42L;
+    private static final long VIEWER_ID = 7L;
 
     @Mock
     private UserRepository userRepository;
@@ -68,6 +71,8 @@ class UserServiceTest {
     private EmailService emailService;
     @Mock
     private RefreshTokenStore refreshTokenStore;
+    @Mock
+    private BlockRepository blockRepository;
 
     private AppProperties appProperties;
     private PetPhotoApplier petPhotoApplier;
@@ -80,7 +85,8 @@ class UserServiceTest {
         userService = new UserService(
                 userRepository, petRepository, petPhotoRepository,
                 passwordChangeTokenRepository,
-                passwordEncoder, emailService, appProperties, refreshTokenStore, petPhotoApplier);
+                passwordEncoder, emailService, appProperties, refreshTokenStore,
+                petPhotoApplier, blockRepository);
     }
 
     @Test
@@ -108,6 +114,51 @@ class UserServiceTest {
         when(userRepository.findProfileById(USER_ID)).thenReturn(Optional.empty());
 
         assertThrows(UserNotFoundException.class, () -> userService.me(USER_ID));
+    }
+
+    @Test
+    void publicProfile_activeUser_returnsOnlyPublicInfo() {
+        User target = owner();
+        target.setBio("Amoureux des chats");
+        target.setProfilePicture("https://cdn/avatar.jpg");
+        target.setCreatedAt(LocalDateTime.of(2025, 1, 15, 10, 0));
+        when(userRepository.findByIdAndActiveTrue(USER_ID)).thenReturn(Optional.of(target));
+
+        PublicUserResponse response = userService.publicProfile(VIEWER_ID, USER_ID);
+
+        assertEquals(USER_ID, response.id());
+        assertEquals("Jane", response.firstName());
+        assertEquals("Doe", response.lastName());
+        assertEquals("Amoureux des chats", response.bio());
+        assertEquals("https://cdn/avatar.jpg", response.profilePicture());
+        assertEquals(LocalDateTime.of(2025, 1, 15, 10, 0), response.createdAt());
+        verify(blockRepository).existBetweenOwners(VIEWER_ID, USER_ID);
+    }
+
+    @Test
+    void publicProfile_unknownOrInactiveUser_throwsUserNotFound() {
+        when(userRepository.findByIdAndActiveTrue(99L)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> userService.publicProfile(VIEWER_ID, 99L));
+        verify(blockRepository, never()).existBetweenOwners(anyLong(), anyLong());
+    }
+
+    @Test
+    void publicProfile_whenBlocked_throwsUserNotFound() {
+        when(userRepository.findByIdAndActiveTrue(USER_ID)).thenReturn(Optional.of(owner()));
+        when(blockRepository.existBetweenOwners(VIEWER_ID, USER_ID)).thenReturn(true);
+
+        assertThrows(UserNotFoundException.class, () -> userService.publicProfile(VIEWER_ID, USER_ID));
+    }
+
+    @Test
+    void publicProfile_ownProfile_skipsBlockCheck() {
+        when(userRepository.findByIdAndActiveTrue(USER_ID)).thenReturn(Optional.of(owner()));
+
+        PublicUserResponse response = userService.publicProfile(USER_ID, USER_ID);
+
+        assertEquals(USER_ID, response.id());
+        verify(blockRepository, never()).existBetweenOwners(anyLong(), anyLong());
     }
 
     @Test

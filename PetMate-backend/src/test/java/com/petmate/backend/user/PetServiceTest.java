@@ -9,6 +9,7 @@ import com.petmate.backend.enums.PetType;
 import com.petmate.backend.exception.PetNotFoundException;
 import com.petmate.backend.exception.RegistrationException;
 import com.petmate.backend.exception.UserNotFoundException;
+import com.petmate.backend.repository.BlockRepository;
 import com.petmate.backend.repository.PetPhotoRepository;
 import com.petmate.backend.repository.PetRepository;
 import com.petmate.backend.repository.UserRepository;
@@ -37,6 +38,7 @@ import static org.mockito.Mockito.when;
 class PetServiceTest {
 
     private static final long OWNER_ID = 42L;
+    private static final long VIEWER_ID = 7L;
 
     @Mock
     private PetRepository petRepository;
@@ -44,12 +46,15 @@ class PetServiceTest {
     private UserRepository userRepository;
     @Mock
     private PetPhotoRepository petPhotoRepository;
+    @Mock
+    private BlockRepository blockRepository;
 
     private PetService petService;
 
     @BeforeEach
     void setUp() {
-        petService = new PetService(petRepository, userRepository, new PetPhotoApplier(petPhotoRepository));
+        petService = new PetService(petRepository, userRepository,
+                new PetPhotoApplier(petPhotoRepository), blockRepository);
     }
 
     @Test
@@ -101,6 +106,51 @@ class PetServiceTest {
         assertEquals("Rex", pets.get(0).name());
         assertEquals(1, pets.get(0).photos().size());
         verify(petRepository).findAllActiveByOwnerIdWithPhotos(OWNER_ID);
+    }
+
+    @Test
+    void listPublicPets_activeOwner_returnsOnlyActivePetsWithPhotos() {
+        Pet rex = pet(1L, owner(OWNER_ID));
+        Pet lea = pet(2L, owner(OWNER_ID));
+        lea.setActive(false);
+        when(userRepository.findByIdAndActiveTrue(OWNER_ID)).thenReturn(Optional.of(owner(OWNER_ID)));
+        when(petRepository.findAllActiveByOwnerIdWithPhotos(OWNER_ID)).thenReturn(List.of(rex));
+
+        List<PetResponse> pets = petService.listPublicPets(VIEWER_ID, OWNER_ID);
+
+        assertEquals(1, pets.size());
+        assertEquals("Rex", pets.get(0).name());
+        assertEquals(1, pets.get(0).photos().size());
+        verify(blockRepository).existBetweenOwners(VIEWER_ID, OWNER_ID);
+    }
+
+    @Test
+    void listPublicPets_unknownOrInactiveOwner_throwsUserNotFound() {
+        when(userRepository.findByIdAndActiveTrue(99L)).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class, () -> petService.listPublicPets(VIEWER_ID, 99L));
+        verify(blockRepository, never()).existBetweenOwners(anyLong(), anyLong());
+        verify(petRepository, never()).findAllActiveByOwnerIdWithPhotos(anyLong());
+    }
+
+    @Test
+    void listPublicPets_whenBlocked_throwsUserNotFound() {
+        when(userRepository.findByIdAndActiveTrue(OWNER_ID)).thenReturn(Optional.of(owner(OWNER_ID)));
+        when(blockRepository.existBetweenOwners(VIEWER_ID, OWNER_ID)).thenReturn(true);
+
+        assertThrows(UserNotFoundException.class, () -> petService.listPublicPets(VIEWER_ID, OWNER_ID));
+        verify(petRepository, never()).findAllActiveByOwnerIdWithPhotos(anyLong());
+    }
+
+    @Test
+    void listPublicPets_ownPets_skipsBlockCheck() {
+        Pet rex = pet(1L, owner(VIEWER_ID));
+        when(userRepository.findByIdAndActiveTrue(VIEWER_ID)).thenReturn(Optional.of(owner(VIEWER_ID)));
+        when(petRepository.findAllActiveByOwnerIdWithPhotos(VIEWER_ID)).thenReturn(List.of(rex));
+
+        petService.listPublicPets(VIEWER_ID, VIEWER_ID);
+
+        verify(blockRepository, never()).existBetweenOwners(anyLong(), anyLong());
     }
 
     @Test

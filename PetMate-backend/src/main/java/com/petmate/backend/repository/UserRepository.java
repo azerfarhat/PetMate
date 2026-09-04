@@ -23,6 +23,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmailAndActiveTrue(String email);
 
     /**
+     * Compte actif par identifiant. Un compte supprimé (soft delete) ou
+     * jamais vérifié ne doit jamais être exposé (404/inauthentifié).
+     */
+    Optional<User> findByIdAndActiveTrue(Long id);
+
+    /**
      * Vérifie l'existence d'un compte {@code actif} avec cette adresse email.
      * La réinscription est autorisée si seuls des comptes supprimés (soft
      * delete, actifs à false) utilisent déjà cet email.

@@ -11,11 +11,13 @@ import com.petmate.backend.exception.PetNotFoundException;
 import com.petmate.backend.exception.RateLimitExceededException;
 import com.petmate.backend.exception.UserNotFoundException;
 import com.petmate.backend.mail.EmailService;
+import com.petmate.backend.repository.BlockRepository;
 import com.petmate.backend.repository.PasswordChangeTokenRepository;
 import com.petmate.backend.repository.PetPhotoRepository;
 import com.petmate.backend.repository.PetRepository;
 import com.petmate.backend.repository.UserRepository;
 import com.petmate.backend.security.RefreshTokenStore;
+import com.petmate.backend.user.dto.PublicUserResponse;
 import com.petmate.backend.user.dto.PetUpdateRequest;
 import com.petmate.backend.user.dto.PasswordChangeRequest;
 import com.petmate.backend.user.dto.UpdateProfileRequest;
@@ -59,6 +61,7 @@ public class UserService {
     private final AppProperties appProperties;
     private final RefreshTokenStore refreshTokenStore;
     private final PetPhotoApplier petPhotoApplier;
+    private final BlockRepository blockRepository;
 
     /** Anti-spam : délai minimal entre deux demandes de code pour un même utilisateur. */
     private final Map<Long, Instant> lastCodeRequests = new ConcurrentHashMap<>();
@@ -71,7 +74,8 @@ public class UserService {
                        EmailService emailService,
                        AppProperties appProperties,
                        RefreshTokenStore refreshTokenStore,
-                       PetPhotoApplier petPhotoApplier) {
+                       PetPhotoApplier petPhotoApplier,
+                       BlockRepository blockRepository) {
         this.userRepository = userRepository;
         this.petRepository = petRepository;
         this.petPhotoRepository = petPhotoRepository;
@@ -81,6 +85,7 @@ public class UserService {
         this.appProperties = appProperties;
         this.refreshTokenStore = refreshTokenStore;
         this.petPhotoApplier = petPhotoApplier;
+        this.blockRepository = blockRepository;
     }
 
     /**
@@ -89,6 +94,34 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse me(Long userId) {
         return UserProfileMapper.toResponse(getProfile(userId));
+    }
+
+    /**
+     * Profil public d'un membre actif : uniquement les informations destinées
+     * aux autres membres (aucun email ni localisation). Retourne 404 si le
+     * compte est inconnu/inactif ou si l'un des deux a bloqué l'autre, afin de
+     * ne révéler ni l'existence du compte ni le blocage.
+     */
+    @Transactional(readOnly = true)
+    public PublicUserResponse publicProfile(Long viewerId, Long userId) {
+        User user = userRepository.findByIdAndActiveTrue(userId)
+                .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable"));
+
+        if (!userId.equals(viewerId) && blockRepository.existBetweenOwners(viewerId, userId)) {
+            throw new UserNotFoundException("Utilisateur introuvable");
+        }
+
+        return toPublicResponse(user);
+    }
+
+    private static PublicUserResponse toPublicResponse(User user) {
+        return new PublicUserResponse(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getBio(),
+                user.getProfilePicture(),
+                user.getCreatedAt());
     }
 
     /**

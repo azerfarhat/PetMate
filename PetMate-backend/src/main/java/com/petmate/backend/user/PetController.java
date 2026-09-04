@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -37,11 +38,19 @@ public class PetController {
     }
 
     /**
-     * Tous les Pet actifs de l'utilisateur connecté.
+     * Sans paramètre : tous les Pet actifs de l'utilisateur connecté.
+     * Avec {@code owner_id} : les Pet actifs publics d'un autre membre
+     * (profil d'un tiers), masqués (404) s'il existe un blocage entre les
+     * deux comptes. Le paramètre {@code owner_id} suit le contrat mobile.
      */
     @GetMapping
-    public ResponseEntity<List<PetResponse>> listMine(Authentication authentication) {
-        return ResponseEntity.ok(petService.listOwnedPets(userId(authentication)));
+    public ResponseEntity<List<PetResponse>> listPets(Authentication authentication,
+                                                      @RequestParam(value = "owner_id", required = false) Long ownerId) {
+        long myId = userId(authentication);
+        if (ownerId == null) {
+            return ResponseEntity.ok(petService.listOwnedPets(myId));
+        }
+        return ResponseEntity.ok(petService.listPublicPets(myId, ownerId));
     }
 
     /**
