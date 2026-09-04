@@ -22,6 +22,24 @@ services:
       timeout: 5s
       retries: 10
 
+  minio:
+    image: minio/minio:latest
+    container_name: pawmate-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      # API S3 : utilisée par le backend (réseau docker) ET par l'app pour
+      # l'upload direct des photos.
+      - "${MINIO_API_PORT:-9000}:9000"
+      # Console web d'administration (http://localhost:9001).
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      # Volume persistant : les photos survivent aux redémarrages/rebuilds.
+      - miniodata:/data
+
   backend:
     build:
       context: .
@@ -35,11 +53,19 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       # Le backend envoie les emails via le SMTP réel défini dans .env.
+      # Endpoint MinIO vu de l'intérieur du réseau docker (jamais "localhost").
+      MINIO_ENDPOINT: http://minio:9000
+      # Endpoint MinIO vu par les clients (app) : localhost = machine hôte.
+      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
     ports:
       - "${SERVER_PORT:-8080}:8080"
     depends_on:
       db:
         condition: service_healthy
+      # Démarre avec MinIO (l'initialisation du bucket ré-essaie si nécessaire).
+      minio:
+        condition: service_started
 
 volumes:
   pgdata:
+  miniodata:

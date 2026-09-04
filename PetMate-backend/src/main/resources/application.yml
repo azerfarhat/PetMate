@@ -51,6 +51,16 @@ app:
     register-window-minutes: ${REGISTER_WINDOW_MINUTES:60}
   match:
     re-match-cooldown-days: ${RE_MATCH_COOLDOWN_DAYS:15}
+  storage:
+    # Endpoint vu par le BACKEND (réseau docker) : http://minio:9000 en dev.
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    # Endpoint vu par les CLIENTS (app) : http://localhost:9000 en dev.
+    public-endpoint: ${MINIO_PUBLIC_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY}
+    secret-key: ${MINIO_SECRET_KEY}
+    bucket: ${MINIO_BUCKET:pawmate-media}
+    presign-expiration-minutes: ${MINIO_PRESIGN_EXPIRATION_MINUTES:5}
+    max-file-bytes: ${MINIO_MAX_FILE_BYTES:5242880}
 
 management:
   endpoints:
