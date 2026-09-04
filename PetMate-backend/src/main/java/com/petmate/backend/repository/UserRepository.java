@@ -14,17 +14,31 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
-    boolean existsByEmail(String email);
+    /**
+     * Retourne uniquement le compte actif portant cet email. Comme plusieurs
+     * comptes supprimés (soft delete) peuvent partager le même email qu'un
+     * compte actif, le login et la réinitialisation de mot de passe doivent
+     * cibler le compte actif et ignorer les comptes archivés.
+     */
+    Optional<User> findByEmailAndActiveTrue(String email);
 
     /**
-     * Charge un profil complet (User + Pets + Photos) en une seule requête
-     * (fetch joins), évitant le problème N+1. Distinct car les joins sur les
-     * collections dupliquent les lignes.
+     * Vérifie l'existence d'un compte {@code actif} avec cette adresse email.
+     * La réinscription est autorisée si seuls des comptes supprimés (soft
+     * delete, actifs à false) utilisent déjà cet email.
+     */
+    boolean existsByEmailAndActiveTrue(String email);
+
+    /**
+     * Charge le profil de l'utilisateur avec ses Pets (une seule collection
+     * fetch-ée ici). Les Photos sont chargées séparément par le service via
+     * {@code PetPhotoRepository#findByPetIds} : Hibernate interdit de fetch-er
+     * deux collections List en même temps (MultipleBagFetchException).
+     * Distinct car le join sur la collection duplique les lignes.
      */
     @Query("""
             SELECT DISTINCT u FROM User u
             LEFT JOIN FETCH u.pets p
-            LEFT JOIN FETCH p.photos
             WHERE u.id = :id
             """)
     Optional<User> findProfileById(@Param("id") Long id);

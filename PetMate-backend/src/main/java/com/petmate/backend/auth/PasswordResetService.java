@@ -49,7 +49,8 @@ public class PasswordResetService {
     @Transactional
     public MessageResponse requestReset(ForgotPasswordRequest request) {
         // Ne révélons pas si l'adresse existe : réponse identique dans les deux cas.
-        userRepository.findByEmail(request.email()).ifPresent(user -> {
+        // Cible le compte actif uniquement (les comptes supprimés sont ignorés).
+        userRepository.findByEmailAndActiveTrue(request.email()).ifPresent(user -> {
             if (!user.isEmailVerified()) {
                 throw new VerificationRequiredException("Ce compte n'a pas encore vérifié son adresse email");
             }

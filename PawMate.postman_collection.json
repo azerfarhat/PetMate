@@ -1,0 +1,1110 @@
+{
+  "info": {
+    "name": "PawMate",
+    "description": "API PawMate — Backend Spring Boot. Collection complète et organisée.\n\nWorkflow :\n1. Auth > Register → 201\n2. Auth > Verify Code → 200\n3. Auth > Login → 200 (script sauvegarde accessToken + refreshToken)\n4. Tester chaque module (Users, Pets, Match, Conversations, Notifications)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "1. Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/register",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jean\",\n  \"lastName\": \"Dupont\",\n  \"email\": \"{{REGISTER_EMAIL}}\",\n  \"password\": \"{{PASSWORD}}\",\n  \"bio\": \"Passionné de chiens\",\n  \"latitude\": 48.8566,\n  \"longitude\": 2.3522,\n  \"searchRadius\": 10,\n  \"pets\": [\n    {\n      \"name\": \"Rex\",\n      \"type\": \"DOG\",\n      \"breed\": \"Labrador\",\n      \"gender\": \"MALE\",\n      \"age\": 3,\n      \"energyLevel\": \"HIGH\",\n      \"description\": \"Très joueur\",\n      \"vaccinated\": true,\n      \"neutered\": true\n    }\n  ]\n}"
+            },
+            "description": "Crée un compte Owner (User + 1..* Pets).\nPOST 201 : compte créé + email envoyé.\nPOST 400 : validation.\nPOST 409 : email déjà utilisé. Rate-limit : 5 / 60 min → 429."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Verify Email (GET lien)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/verify-email?token={{VERIFY_TOKEN}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "verify-email"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{VERIFY_TOKEN}}"
+                }
+              ]
+            },
+            "description": "Vérifie l'email via le lien reçu. GET 200 : vérifié. GET 400 : token invalide/expiré."
+          },
+          "response": []
+        },
+        {
+          "name": "2b. Verify Code (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/verify-code",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "verify-code"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{VERIFY_CODE}}\"\n}"
+            },
+            "description": "Vérifie l'email avec le code 6 chiffres. POST 200 : vérifié. POST 400 : code invalide."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Resend Verification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/resend-verification",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "resend-verification"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{EMAIL}}\"\n}"
+            },
+            "description": "Renvoie l'email de vérification (ancien token invalidé). 200/404/400."
+          },
+          "response": []
+        },
+        {
+          "name": "4. Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/login",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{EMAIL}}\",\n  \"password\": \"{{PASSWORD}}\",\n  \"rememberMe\": false\n}"
+            },
+            "description": "Connexion. Sauvegarde accessToken + refreshToken automatiquement.\nAuth brute-force : 5 échecs → 429 pendant 5 min.\nrememberMe=true → refresh 30 j, sinon 7 j.",
+            "event": [
+              {
+                "listen": "test",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.accessToken) { pm.environment.set('accessToken', json.accessToken); }",
+                  "if (json.refreshToken) { pm.environment.set('refreshToken', json.refreshToken); }"
+                ]
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "5. Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/refresh",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "description": "Rotation du refresh token (ancien révoqué, nouveau couple retourné).",
+            "event": [
+              {
+                "listen": "test",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.accessToken) { pm.environment.set('accessToken', json.accessToken); }",
+                  "if (json.refreshToken) { pm.environment.set('refreshToken', json.refreshToken); }"
+                ]
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "6. Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/logout",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "description": "Révoque le refresh token courant, idempotent."
+          },
+          "response": []
+        },
+        {
+          "name": "7. Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/forgot-password",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{EMAIL}}\"\n}"
+            },
+            "description": "Envoie le lien de réinitialisation (pawmate://verify/reset). Réponse générique."
+          },
+          "response": []
+        },
+        {
+          "name": "8. Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/auth/reset-password",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{RESET_TOKEN}}\",\n  \"newPassword\": \"{{NEW_PASSWORD}}\"\n}"
+            },
+            "description": "Réinitialise le mot de passe (jeton valide 30 min, usage unique)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "GET /users/me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/users/me",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Profil complet (pets + photos). JWT requis."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /users/me",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/users/me",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jean\",\n  \"lastName\": \"Dupont\",\n  \"bio\": \"Nouvelle bio\",\n  \"latitude\": 48.8566,\n  \"longitude\": 2.3522,\n  \"searchRadius\": 20,\n  \"pets\": [\n    {\n      \"id\": \"{{PET_ID}}\",\n      \"name\": \"Rex\",\n      \"type\": \"DOG\",\n      \"breed\": \"Labrador\",\n      \"gender\": \"MALE\",\n      \"age\": 3,\n      \"energyLevel\": \"HIGH\",\n      \"description\": \"Très joueur\",\n      \"vaccinated\": true,\n      \"neutered\": true,\n      \"photos\": [\n        {\n          \"id\": null,\n          \"url\": \"https://cdn.pawmate.app/rex.jpg\",\n          \"primaryPhoto\": true,\n          \"displayOrder\": 0\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "description": "Met à jour le profil (remplacement atomique des pets). id null = nouveau pet."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /users/me",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/users/me",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Suppression douce du compte (désactivé + refresh révoqués). 204."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /users/me/password/request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/users/me/password/request",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "password",
+                "request"
+              ]
+            },
+            "description": "Envoie un code 6 chiffres par email (cooldown, un seul code actif)."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /users/me/password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/users/me/password",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{CHANGE_CODE}}\",\n  \"newPassword\": \"{{NEW_PASSWORD}}\"\n}"
+            },
+            "description": "Confirme le changement de mot de passe avec le code. 200/400."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Pets",
+      "item": [
+        {
+          "name": "GET /pets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/pets",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "pets"
+              ]
+            },
+            "description": "Tous les pet actifs de l'utilisateur. JWT requis."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /pets/{id}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/pets/{{PET_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "pets",
+                "{{PET_ID}}"
+              ]
+            },
+            "description": "Pet possédé par l'utilisateur. 404 si non possédé."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /pets",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/pets",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "pets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rex\",\n  \"type\": \"DOG\",\n  \"breed\": \"Labrador\",\n  \"gender\": \"MALE\",\n  \"age\": 3,\n  \"energyLevel\": \"HIGH\",\n  \"description\": \"Très joueur\",\n  \"vaccinated\": true,\n  \"neutered\": true,\n  \"photos\": [\n    {\n      \"id\": null,\n      \"url\": \"https://cdn.pawmate.app/rex.jpg\",\n      \"primaryPhoto\": true,\n      \"displayOrder\": 0\n    }\n  ]\n}"
+            },
+            "description": "Ajoute un pet (wizard). Actif immédiatement. 201 + header Location."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /pets/{id}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/pets/{{PET_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "pets",
+                "{{PET_ID}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rex Junior\",\n  \"type\": \"DOG\",\n  \"breed\": \"Labrador\",\n  \"gender\": \"MALE\",\n  \"age\": 4,\n  \"energyLevel\": \"HIGH\",\n  \"description\": \"Nouvelle bio\",\n  \"vaccinated\": true,\n  \"neutered\": false,\n  \"photos\": [\n    {\n      \"id\": null,\n      \"url\": \"https://cdn.pawmate.app/rex.jpg\",\n      \"primaryPhoto\": true,\n      \"displayOrder\": 0\n    }\n  ]\n}"
+            },
+            "description": "Remplacement complet du pet (PUT)."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /pets/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/pets/{{PET_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "pets",
+                "{{PET_ID}}"
+              ]
+            },
+            "description": "Soft delete. Refusé si dernier pet actif (RegistrationException 400)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Match",
+      "item": [
+        {
+          "name": "GET /match/candidates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/match/candidates?limit=20&offset=0",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "match",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Feed de découverte (paginé, rayon géo, blocage, cooldown re-match)."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /match/swipe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/match/swipe",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "match",
+                "swipe"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"LIKE\",\n  \"targetPetId\": \"{{PET_ID}}\"\n}"
+            },
+            "description": "LIKE : si réciprocité → match + conversation + notifications bilatérales. PASS : aucun match."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /match",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/match",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "match"
+              ]
+            },
+            "description": "Mes matchs actifs (MATCHED) avec les 2 pets + conversation.",
+            "event": [
+              {
+                "listen": "test",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.length > 0 && json[0].matchId) { pm.environment.set('MATCH_ID', String(json[0].matchId)); }"
+                ]
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /match/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/match/{{MATCH_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "match",
+                "{{MATCH_ID}}"
+              ]
+            },
+            "description": "Unmatch : messages + conversation supprimés, match → UNMATCHED. Réservé aux participants."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Conversations",
+      "item": [
+        {
+          "name": "GET /conversations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/conversations?limit=20&offset=0",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "conversations"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Mes conversations (interlocuteur, son pet, dernier message, nb non-lus).",
+            "event": [
+              {
+                "listen": "test",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.length > 0 && json[0].conversationId) { pm.environment.set('CONVERSATION_ID', String(json[0].conversationId)); }"
+                ]
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "GET /conversations/{id}/messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/conversations/{{CONVERSATION_ID}}/messages?limit=50&offset=0",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "conversations",
+                "{{CONVERSATION_ID}}",
+                "messages"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Historique paginé par date d'envoi."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /conversations/{id}/messages",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/conversations/{{CONVERSATION_ID}}/messages",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "conversations",
+                "{{CONVERSATION_ID}}",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Bonjour, comment va votre pet ?\"\n}"
+            },
+            "description": "Envoie un message (notification créée chez l'interlocuteur)."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /conversations/{id}/read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/conversations/{{CONVERSATION_ID}}/read",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "conversations",
+                "{{CONVERSATION_ID}}",
+                "read"
+              ]
+            },
+            "description": "Marque les messages de l'autre comme lus, idempotent. 204."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "GET /notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/notifications?limit=20&offset=0",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Mes notifications (récentes d'abord) + unreadCount pour le badge."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /notifications/read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/notifications/read",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "notifications",
+                "read"
+              ]
+            },
+            "description": "Marque toutes mes notifications lues, en une requête SQL. 204."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /notifications/{id}/read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/notifications/{{NOTIFICATION_ID}}/read",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "notifications",
+                "{{NOTIFICATION_ID}}",
+                "read"
+              ]
+            },
+            "description": "Marque une notification lue (la sienne uniquement, 404 sinon)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Actuator",
+      "item": [
+        {
+          "name": "GET /actuator/health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{BASE_URL}}/actuator/health",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "Santé du service. Public (sans JWT). Retourne {\"status\":\"UP\"}."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "EMAIL",
+      "value": "mon@email.com",
+      "type": "string"
+    },
+    {
+      "key": "PASSWORD",
+      "value": "Test123!pawmate",
+      "type": "string"
+    },
+    {
+      "key": "NEW_PASSWORD",
+      "value": "NewPass!123",
+      "type": "string"
+    },
+    {
+      "key": "REGISTER_EMAIL",
+      "value": "newuser@gmail.com",
+      "type": "string"
+    },
+    {
+      "key": "VERIFY_CODE",
+      "value": "123456",
+      "type": "string"
+    },
+    {
+      "key": "RESET_TOKEN",
+      "value": "PASTE_TOKEN_ICI",
+      "type": "string"
+    },
+    {
+      "key": "CHANGE_CODE",
+      "value": "123456",
+      "type": "string"
+    },
+    {
+      "key": "PET_ID",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "MATCH_ID",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "CONVERSATION_ID",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "NOTIFICATION_ID",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

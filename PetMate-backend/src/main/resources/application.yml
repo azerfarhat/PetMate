@@ -8,7 +8,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: false
+    show-sql: true
     open-in-view: false
 
   flyway:
@@ -60,3 +60,11 @@ management:
   endpoint:
     health:
       show-details: never
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.security: DEBUG
+    org.springframework.web: TRACE
+    com.petmate.backend: DEBUG

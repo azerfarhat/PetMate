@@ -67,7 +67,7 @@ public class RegistrationService {
 
     @Transactional
     public MessageResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
+        if (userRepository.existsByEmailAndActiveTrue(request.email())) {
             throw new EmailAlreadyExistsException("Un compte avec cet email existe déjà");
         }
         if (request.pets().isEmpty()) {
@@ -128,7 +128,7 @@ public class RegistrationService {
 
     @Transactional
     public MessageResponse resendVerification(ResendVerificationRequest request) {
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmailAndActiveTrue(request.email())
                 .orElseThrow(() -> new UserNotFoundException("Aucun compte associé à cette adresse email"));
 
         if (user.isEmailVerified()) {

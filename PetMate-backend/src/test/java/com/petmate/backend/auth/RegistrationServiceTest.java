@@ -79,7 +79,7 @@ class RegistrationServiceTest {
 
     @Test
     void register_withOnePet_createsUserTokenAndSendsEmail() {
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(userRepository.existsByEmailAndActiveTrue(anyString())).thenReturn(false);
         when(userRepository.save(any(User.class))).then(returnsFirstArg());
         when(petRepository.save(any(Pet.class))).then(returnsFirstArg());
         when(passwordEncoder.encode(anyString())).thenAnswer(inv -> "encoded:" + inv.getArgument(0));
@@ -112,7 +112,7 @@ class RegistrationServiceTest {
 
     @Test
     void register_withMultiplePets_createsAllPetsLinkedToOwner() {
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+when(userRepository.existsByEmailAndActiveTrue(anyString())).thenReturn(false);
         when(userRepository.save(any(User.class))).then(returnsFirstArg());
         when(petRepository.save(any(Pet.class))).then(returnsFirstArg());
         when(passwordEncoder.encode(anyString())).thenReturn("encoded");
@@ -137,7 +137,7 @@ class RegistrationServiceTest {
 
     @Test
     void register_withNoPet_throwsRegistrationException() {
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(userRepository.existsByEmailAndActiveTrue(anyString())).thenReturn(false);
 
         RegisterRequest request = validRequest(List.of());
 
@@ -146,8 +146,8 @@ class RegistrationServiceTest {
     }
 
     @Test
-    void register_withExistingEmail_throwsEmailAlreadyExistsException() {
-        when(userRepository.existsByEmail(anyString())).thenReturn(true);
+    void register_withExistingActiveEmail_throwsEmailAlreadyExistsException() {
+        when(userRepository.existsByEmailAndActiveTrue(anyString())).thenReturn(true);
 
         RegisterRequest request = validRequest(List.of(validPet(null)));
 
@@ -157,8 +157,22 @@ class RegistrationServiceTest {
     }
 
     @Test
+    void register_withOnlySoftDeletedEmail_allowsNewAccount() {
+        when(userRepository.existsByEmailAndActiveTrue(anyString())).thenReturn(false);
+        when(userRepository.save(any(User.class))).then(returnsFirstArg());
+        when(petRepository.save(any(Pet.class))).then(returnsFirstArg());
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+        when(verificationTokenRepository.save(any(EmailVerificationToken.class))).then(returnsFirstArg());
+
+        MessageResponse response = registrationService.register(validRequest(List.of(validPet(null))));
+
+        assertEquals("Compte créé avec succès. Veuillez vérifier votre adresse email.", response.message());
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
     void register_withPhotos_savesPetPhotos() {
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(userRepository.existsByEmailAndActiveTrue(anyString())).thenReturn(false);
         when(userRepository.save(any(User.class))).then(returnsFirstArg());
         when(petRepository.save(any(Pet.class))).then(returnsFirstArg());
         when(petPhotoRepository.save(any(PetPhoto.class))).then(returnsFirstArg());
@@ -180,7 +194,7 @@ class RegistrationServiceTest {
 
     @Test
     void register_whenEmailFails_throwsEmailDeliveryException() {
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(userRepository.existsByEmailAndActiveTrue(anyString())).thenReturn(false);
         when(userRepository.save(any(User.class))).then(returnsFirstArg());
         when(petRepository.save(any(Pet.class))).then(returnsFirstArg());
         when(passwordEncoder.encode(anyString())).thenReturn("encoded");
@@ -318,7 +332,7 @@ class RegistrationServiceTest {
         User user = new User();
         user.setEmail("owner@example.com");
         user.setEmailVerified(false);
-        when(userRepository.findByEmail("owner@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailAndActiveTrue("owner@example.com")).thenReturn(Optional.of(user));
         when(verificationTokenRepository.save(any(EmailVerificationToken.class))).then(returnsFirstArg());
 
         MessageResponse response = registrationService.resendVerification(
@@ -332,7 +346,7 @@ class RegistrationServiceTest {
 
     @Test
     void resendVerification_withUnknownEmail_throwsUserNotFoundException() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailAndActiveTrue("ghost@example.com")).thenReturn(Optional.empty());
 
         assertThrows(UserNotFoundException.class, () -> registrationService.resendVerification(
                 new ResendVerificationRequest("ghost@example.com")));
@@ -343,7 +357,7 @@ class RegistrationServiceTest {
         User user = new User();
         user.setEmail("owner@example.com");
         user.setEmailVerified(true);
-        when(userRepository.findByEmail("owner@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailAndActiveTrue("owner@example.com")).thenReturn(Optional.of(user));
 
         assertThrows(VerificationTokenException.class, () -> registrationService.resendVerification(
                 new ResendVerificationRequest("owner@example.com")));

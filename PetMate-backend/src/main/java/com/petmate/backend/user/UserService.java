@@ -4,6 +4,7 @@ import com.petmate.backend.auth.dto.MessageResponse;
 import com.petmate.backend.config.AppProperties;
 import com.petmate.backend.entity.PasswordChangeToken;
 import com.petmate.backend.entity.Pet;
+import com.petmate.backend.entity.PetPhoto;
 import com.petmate.backend.entity.User;
 import com.petmate.backend.exception.PasswordChangeException;
 import com.petmate.backend.exception.PetNotFoundException;
@@ -11,6 +12,7 @@ import com.petmate.backend.exception.RateLimitExceededException;
 import com.petmate.backend.exception.UserNotFoundException;
 import com.petmate.backend.mail.EmailService;
 import com.petmate.backend.repository.PasswordChangeTokenRepository;
+import com.petmate.backend.repository.PetPhotoRepository;
 import com.petmate.backend.repository.PetRepository;
 import com.petmate.backend.repository.UserRepository;
 import com.petmate.backend.security.RefreshTokenStore;
@@ -50,6 +52,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PetRepository petRepository;
+    private final PetPhotoRepository petPhotoRepository;
     private final PasswordChangeTokenRepository passwordChangeTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
@@ -62,6 +65,7 @@ public class UserService {
 
     public UserService(UserRepository userRepository,
                        PetRepository petRepository,
+                       PetPhotoRepository petPhotoRepository,
                        PasswordChangeTokenRepository passwordChangeTokenRepository,
                        PasswordEncoder passwordEncoder,
                        EmailService emailService,
@@ -70,6 +74,7 @@ public class UserService {
                        PetPhotoApplier petPhotoApplier) {
         this.userRepository = userRepository;
         this.petRepository = petRepository;
+        this.petPhotoRepository = petPhotoRepository;
         this.passwordChangeTokenRepository = passwordChangeTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
@@ -270,8 +275,24 @@ public class UserService {
     }
 
     private User getProfile(Long userId) {
-        return userRepository.findProfileById(userId)
+        User user = userRepository.findProfileById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable"));
+
+        // Charge les photos de tous les Pets du profil en une 2e requête
+        // groupée (petit nombre de requêtes, pas de N+1). Cela évite le
+        // "MultipleBagFetchException" : deux collections List (Pets et
+        // Photos) ne peuvent pas être fetch-ées en même temps en une requête.
+        if (!user.getPets().isEmpty()) {
+            List<Long> petIds = user.getPets().stream()
+                    .map(Pet::getId)
+                    .toList();
+            Map<Long, List<PetPhoto>> photosByPetId = petPhotoRepository.findByPetIds(petIds)
+                    .stream()
+                    .collect(Collectors.groupingBy(photo -> photo.getPet().getId()));
+            user.getPets().forEach(pet ->
+                    pet.setPhotos(photosByPetId.getOrDefault(pet.getId(), List.of())));
+        }
+        return user;
     }
 
     private String generateCode() {

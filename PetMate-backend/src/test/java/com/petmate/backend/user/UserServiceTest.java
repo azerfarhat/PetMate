@@ -78,7 +78,8 @@ class UserServiceTest {
         appProperties = new AppProperties();
         petPhotoApplier = new PetPhotoApplier(petPhotoRepository);
         userService = new UserService(
-                userRepository, petRepository, passwordChangeTokenRepository,
+                userRepository, petRepository, petPhotoRepository,
+                passwordChangeTokenRepository,
                 passwordEncoder, emailService, appProperties, refreshTokenStore, petPhotoApplier);
     }
 
@@ -87,6 +88,8 @@ class UserServiceTest {
         User user = owner();
         user.getPets().add(pet(1L, "Rex"));
         when(userRepository.findProfileById(USER_ID)).thenReturn(Optional.of(user));
+        when(petPhotoRepository.findByPetIds(any()))
+                .thenReturn(List.of(user.getPets().get(0).getPhotos().get(0)));
 
         UserResponse response = userService.me(USER_ID);
 
@@ -113,6 +116,7 @@ class UserServiceTest {
         Pet rex = pet(1L, "Rex");
         user.getPets().add(rex);
         when(userRepository.findProfileById(USER_ID)).thenReturn(Optional.of(user));
+        stubProfilePhotos(user);
 
         UpdateProfileRequest request = new UpdateProfileRequest(
                 "John", "Smith", "https://cdn/avatar.jpg", "Nouvelle bio",
@@ -157,6 +161,7 @@ class UserServiceTest {
         user.getPets().add(pet(1L, "Rex"));
         user.getPets().add(pet(2L, "Lea"));
         when(userRepository.findProfileById(USER_ID)).thenReturn(Optional.of(user));
+        stubProfilePhotos(user);
 
         UpdateProfileRequest request = new UpdateProfileRequest(
                 "Jane", "Doe", null, null, null, null, null,
@@ -174,6 +179,7 @@ class UserServiceTest {
         Pet rex = pet(1L, "Rex");
         user.getPets().add(rex);
         when(userRepository.findProfileById(USER_ID)).thenReturn(Optional.of(user));
+        stubProfilePhotos(user);
 
         UpdateProfileRequest request = new UpdateProfileRequest(
                 "Jane", "Doe", null, null, null, null, null,
@@ -202,6 +208,7 @@ class UserServiceTest {
         User user = owner();
         user.getPets().add(pet(1L, "Rex"));
         when(userRepository.findProfileById(USER_ID)).thenReturn(Optional.of(user));
+        stubProfilePhotos(user);
 
         UpdateProfileRequest request = new UpdateProfileRequest(
                 "Jane", "Doe", null, null, null, null, null,
@@ -348,5 +355,13 @@ class UserServiceTest {
         return new PetUpdateRequest(
                 id, name, PetType.DOG, "Labrador", PetGender.MALE, 2,
                 EnergyLevel.HIGH, "Joueur", true, true, null);
+    }
+
+    /** Stub le rechargement des photos de profil, reproduisant le comportement du service. */
+    private void stubProfilePhotos(User user) {
+        when(petPhotoRepository.findByPetIds(any())).thenReturn(
+                user.getPets().stream()
+                        .flatMap(pet -> pet.getPhotos().stream())
+                        .toList());
     }
 }
