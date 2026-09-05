@@ -1,5 +1,5 @@
 import '../datasources/onboarding_local_data_source.dart';
-import '../domain/repositories/onboarding_repository.dart';
+import '../../domain/repositories/onboarding_repository.dart';
 
 /// Implementation of [OnboardingRepository] backed by local storage.
 class OnboardingRepositoryImpl implements OnboardingRepository {

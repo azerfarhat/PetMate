@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import '../domain/entities/onboarding_slide.dart';
+import '../../domain/entities/onboarding_slide.dart';
 
 /// UI state for the onboarding flow.
 class OnboardingController extends ChangeNotifier {

@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 
-import '../../../core/errors/failures.dart';
-import '../domain/entities/user_profile.dart';
-import '../domain/usecases/get_my_profile.dart';
-import '../domain/usecases/update_user_profile.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../pets/domain/entities/pet.dart';
+import '../../domain/entities/user_profile.dart';
+import '../../domain/usecases/get_my_profile.dart';
+import '../../domain/usecases/update_user_profile.dart';
 
 /// Manages the current user's profile UI state.
 class UserProfileController extends ChangeNotifier {
@@ -42,20 +43,28 @@ class UserProfileController extends ChangeNotifier {
 
   /// Updates the current user's profile.
   Future<bool> updateProfile({
-    String? displayName,
+    required String firstName,
+    required String lastName,
+    String? profilePicture,
     String? bio,
-    String? avatarUrl,
-    DateTime? dateOfBirth,
+    required List<Pet> pets,
+    double? latitude,
+    double? longitude,
+    int? searchRadius,
   }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
     try {
       _profile = await _updateUserProfile(
-        displayName: displayName,
+        firstName: firstName,
+        lastName: lastName,
+        profilePicture: profilePicture,
         bio: bio,
-        avatarUrl: avatarUrl,
-        dateOfBirth: dateOfBirth,
+        pets: pets,
+        latitude: latitude,
+        longitude: longitude,
+        searchRadius: searchRadius,
       );
       return true;
     } on Failure catch (failure) {

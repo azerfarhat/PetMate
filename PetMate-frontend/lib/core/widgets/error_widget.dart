@@ -5,8 +5,8 @@ import '../../app/theme/app_dimensions.dart';
 import 'app_button.dart';
 
 /// Error state shown when a fetch or action fails, with an optional retry.
-class ErrorWidget extends StatelessWidget {
-  const ErrorWidget({
+class ErrorView extends StatelessWidget {
+  const ErrorView({
     super.key,
     this.message = 'Something went wrong.',
     this.onRetry,

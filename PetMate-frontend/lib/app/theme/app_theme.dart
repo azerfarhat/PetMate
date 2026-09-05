@@ -132,7 +132,6 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.white,
         indicatorColor: AppColors.primary.withValues(alpha: 0.12),
-        selectedIconTheme: const IconThemeData(color: AppColors.primary),
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => AppTextStyles.caption.copyWith(
             color: states.contains(WidgetState.selected)

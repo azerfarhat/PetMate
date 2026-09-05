@@ -1,8 +1,12 @@
 /// Energy level of a pet.
+///
+/// Values follow the backend contract (`EnergyLevel`). Note that the backend
+/// spells the middle level `MEDIUM` while the app vocabulary uses `moderate`;
+/// the enum keeps the app-facing name and maps the wire value separately.
 enum EnergyLevel {
-  low('low'),
-  moderate('moderate'),
-  high('high');
+  low('LOW'),
+  moderate('MEDIUM'),
+  high('HIGH');
 
   const EnergyLevel(this.value);
 

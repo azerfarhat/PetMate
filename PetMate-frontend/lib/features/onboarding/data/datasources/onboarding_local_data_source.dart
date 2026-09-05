@@ -1,6 +1,5 @@
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/storage/local_storage.dart';
-import '../domain/repositories/onboarding_repository.dart';
 
 /// Local datasource for onboarding state.
 ///

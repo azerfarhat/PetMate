@@ -18,7 +18,8 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  late final TextEditingController _nameController;
+  late final TextEditingController _firstNameController;
+  late final TextEditingController _lastNameController;
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
   final _formKey = GlobalKey<FormState>();
@@ -26,14 +27,16 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController();
+    _firstNameController = TextEditingController();
+    _lastNameController = TextEditingController();
     _emailController = TextEditingController();
     _passwordController = TextEditingController();
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -46,7 +49,8 @@ class _RegisterPageState extends State<RegisterPage> {
     final success = await widget.controller.register(
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      displayName: _nameController.text.trim(),
+      firstName: _firstNameController.text.trim(),
+      lastName: _lastNameController.text.trim(),
     );
     if (success && mounted) {
       // TODO: navigate to home / onboarding-complete flow.
@@ -80,14 +84,36 @@ class _RegisterPageState extends State<RegisterPage> {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: AppDimensions.s8),
-                AppTextField(
-                  controller: _nameController,
-                  label: 'Display name',
-                  hint: 'Your name',
-                  prefixIcon: Icons.person_outline,
-                  textInputAction: TextInputAction.next,
-                  validator: (value) =>
-                      Validators.required(value, message: 'Enter your name.'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppTextField(
+                        controller: _firstNameController,
+                        label: 'First name',
+                        hint: 'Your first name',
+                        prefixIcon: Icons.person_outline,
+                        textInputAction: TextInputAction.next,
+                        validator: (value) => Validators.required(
+                          value,
+                          message: 'Enter your first name.',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppDimensions.s3),
+                    Expanded(
+                      child: AppTextField(
+                        controller: _lastNameController,
+                        label: 'Last name',
+                        hint: 'Your last name',
+                        prefixIcon: Icons.person_outline,
+                        textInputAction: TextInputAction.next,
+                        validator: (value) => Validators.required(
+                          value,
+                          message: 'Enter your last name.',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: AppDimensions.s4),
                 AppTextField(

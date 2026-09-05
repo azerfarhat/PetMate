@@ -1,6 +1,9 @@
+import '../../../pets/data/mappers/pet_mapper.dart';
+import '../../../pets/domain/entities/pet.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/repositories/user_profile_repository.dart';
 import '../datasources/user_profile_remote_data_source.dart';
+import '../dtos/user_profile_update_request_dto.dart';
 import '../mappers/user_profile_mapper.dart';
 
 /// Implementation of [UserProfileRepository].
@@ -23,19 +26,26 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
 
   @override
   Future<UserProfile> updateProfile({
-    String? displayName,
+    required String firstName,
+    required String lastName,
+    String? profilePicture,
     String? bio,
-    String? avatarUrl,
-    DateTime? dateOfBirth,
+    required List<Pet> pets,
+    double? latitude,
+    double? longitude,
+    int? searchRadius,
   }) async {
-    final body = <String, dynamic>{
-      if (displayName != null) 'display_name': displayName,
-      if (bio != null) 'bio': bio,
-      if (avatarUrl != null) 'avatar_url': avatarUrl,
-      if (dateOfBirth != null)
-        'date_of_birth': dateOfBirth.toIso8601String(),
-    };
-    final dto = await _remoteDataSource.updateProfile(body);
+    final request = UserProfileUpdateRequestDto(
+      firstName: firstName,
+      lastName: lastName,
+      profilePicture: profilePicture,
+      bio: bio,
+      latitude: latitude,
+      longitude: longitude,
+      searchRadius: searchRadius,
+      pets: pets.map(PetMapper.toRequestDto).toList(),
+    );
+    final dto = await _remoteDataSource.updateProfile(request);
     return UserProfileMapper.toEntity(dto);
   }
 }

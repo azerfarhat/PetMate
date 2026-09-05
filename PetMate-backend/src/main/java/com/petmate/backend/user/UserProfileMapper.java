@@ -50,6 +50,7 @@ public final class UserProfileMapper {
 
         return new PetResponse(
                 pet.getId(),
+                pet.getOwner().getId(),
                 pet.getName(),
                 pet.getType(),
                 pet.getBreed(),

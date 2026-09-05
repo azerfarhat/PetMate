@@ -1,7 +1,12 @@
 /// Gender of a pet.
+///
+/// Values follow the backend contract (`PetGender`); `unknown` is kept for
+/// profiles that do not state a gender, with a safe fallback to `male` for
+/// unexpected wire values.
 enum PetGender {
-  male('male'),
-  female('female');
+  male('MALE'),
+  female('FEMALE'),
+  unknown('UNKNOWN');
 
   const PetGender(this.value);
 

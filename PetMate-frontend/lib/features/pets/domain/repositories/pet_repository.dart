@@ -1,6 +1,6 @@
-import '../../../core/enums/energy_level.dart';
-import '../../../core/enums/pet_gender.dart';
-import '../../../core/enums/pet_type.dart';
+import '../../../../core/enums/energy_level.dart';
+import '../../../../core/enums/pet_gender.dart';
+import '../../../../core/enums/pet_type.dart';
 import '../entities/pet.dart';
 
 /// Repository contract for pet data.
@@ -28,12 +28,16 @@ abstract interface class PetRepository {
     bool isNeutered = false,
   });
 
-  /// Updates an existing pet profile.
+  /// Replaces an existing pet profile.
+  ///
+  /// The backend uses a full-replacement PUT, so all core fields are required.
   Future<Pet> updatePet({
     required String petId,
-    String? name,
+    required String name,
+    required PetType type,
+    required PetGender gender,
     String? breed,
-    int? ageYears,
+    required int ageYears,
     EnergyLevel? energyLevel,
     String? bio,
     List<String>? photos,

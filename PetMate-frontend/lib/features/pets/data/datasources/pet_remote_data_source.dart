@@ -1,8 +1,7 @@
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
-import '../dtos/create_pet_request_dto.dart';
+import '../dtos/pet_request_dto.dart';
 import '../dtos/pet_response_dto.dart';
-import '../dtos/update_pet_request_dto.dart';
 
 /// Remote datasource for pets.
 class PetRemoteDataSource {
@@ -32,7 +31,7 @@ class PetRemoteDataSource {
     return PetResponseDto.fromJson(response as Map<String, dynamic>);
   }
 
-  Future<PetResponseDto> createPet(CreatePetRequestDto dto) async {
+  Future<PetResponseDto> createPet(PetRequestDto dto) async {
     final response = await _apiClient.post(
       ApiConstants.petsBasePath,
       body: dto.toJson(),
@@ -40,7 +39,7 @@ class PetRemoteDataSource {
     return PetResponseDto.fromJson(response as Map<String, dynamic>);
   }
 
-  Future<PetResponseDto> updatePet(String petId, UpdatePetRequestDto dto) async {
+  Future<PetResponseDto> updatePet(String petId, PetRequestDto dto) async {
     final response = await _apiClient.put(
       '${ApiConstants.petsBasePath}/$petId',
       body: dto.toJson(),

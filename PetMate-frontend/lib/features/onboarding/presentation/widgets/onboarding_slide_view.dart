@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_dimensions.dart';
-import '../domain/entities/onboarding_slide.dart';
+import '../../domain/entities/onboarding_slide.dart';
 
 /// A single onboarding slide card: illustration, title and description.
 class OnboardingSlideView extends StatelessWidget {
@@ -20,7 +20,7 @@ class OnboardingSlideView extends StatelessWidget {
             slide.imagePath,
             errorBuilder: (context, error, stackTrace) => Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
               ),
               child: const Icon(Icons.pets, size: 120),

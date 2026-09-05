@@ -1,5 +1,6 @@
 import '../../domain/entities/auth_session.dart';
 import '../../domain/entities/auth_user.dart';
+import '../../../user_profile/data/dtos/user_profile_dto.dart';
 import '../dtos/auth_response_dto.dart';
 import '../models/auth_session_model.dart';
 
@@ -9,17 +10,20 @@ import '../models/auth_session_model.dart';
 abstract final class AuthMapper {
   AuthMapper._();
 
-  /// Converts an API response DTO into a Domain [AuthSession].
-  static AuthSession toSession(AuthResponseDto dto) {
+  /// Converts the login/register token response plus the fetched profile into
+  /// a Domain [AuthSession].
+  static AuthSession toSession(AuthResponseDto auth, UserProfileDto user) {
     return AuthSession(
-      token: dto.token,
-      refreshToken: dto.refreshToken,
+      token: auth.accessToken,
+      refreshToken: auth.refreshToken,
       user: AuthUser(
-        id: dto.user.id,
-        email: dto.user.email,
-        displayName: dto.user.displayName,
-        avatarUrl: dto.user.avatarUrl,
-        isVerified: dto.user.isVerified,
+        id: user.id,
+        email: user.email ?? '',
+        displayName: [user.firstName.trim(), user.lastName?.trim() ?? '']
+            .where((part) => part.isNotEmpty)
+            .join(' '),
+        avatarUrl: user.profilePicture,
+        isVerified: user.emailVerified,
       ),
     );
   }

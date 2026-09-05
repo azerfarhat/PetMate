@@ -35,10 +35,7 @@ abstract final class ApiConstants {
   static const String authBasePath = '/auth';
   static const String usersBasePath = '/users';
   static const String petsBasePath = '/pets';
-  static const String discoveryBasePath = '/discovery';
-  static const String matchesBasePath = '/matches';
-  static const String favoritesBasePath = '/favorites';
-  static const String activitiesBasePath = '/activities';
+  static const String matchesBasePath = '/match';
   static const String conversationsBasePath = '/conversations';
   static const String messagesBasePath = '/messages';
   static const String notificationsBasePath = '/notifications';
@@ -47,4 +44,11 @@ abstract final class ApiConstants {
   static const String registerEndpoint = '$authBasePath/register';
   static const String logoutEndpoint = '$authBasePath/logout';
   static const String refreshTokenEndpoint = '$authBasePath/refresh';
+
+  /// Current (authenticated) user profile endpoint.
+  static const String currentUserEndpoint = '$usersBasePath/me';
+
+  // Discovery (matching) endpoints.
+  static const String matchCandidatesEndpoint = '$matchesBasePath/candidates';
+  static const String matchSwipeEndpoint = '$matchesBasePath/swipe';
 }

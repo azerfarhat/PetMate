@@ -120,6 +120,8 @@ class ApiClient {
     }
 
     switch (statusCode) {
+      case 400:
+        throw const ValidationException();
       case 401:
         throw const UnauthorizedException();
       case 403:

@@ -1,6 +1,6 @@
-import '../../../core/enums/energy_level.dart';
-import '../../../core/enums/pet_gender.dart';
-import '../../../core/enums/pet_type.dart';
+import '../../../../core/enums/energy_level.dart';
+import '../../../../core/enums/pet_gender.dart';
+import '../../../../core/enums/pet_type.dart';
 import '../entities/pet.dart';
 import '../repositories/pet_repository.dart';
 

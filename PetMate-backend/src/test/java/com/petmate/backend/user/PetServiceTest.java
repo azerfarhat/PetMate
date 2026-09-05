@@ -65,6 +65,7 @@ class PetServiceTest {
         PetResponse response = petService.getOwnedPet(OWNER_ID, 1L);
 
         assertEquals(1L, response.id());
+        assertEquals(OWNER_ID, response.ownerId());
         assertEquals("Rex", response.name());
         assertEquals(PetType.DOG, response.type());
         assertEquals("Labrador", response.breed());

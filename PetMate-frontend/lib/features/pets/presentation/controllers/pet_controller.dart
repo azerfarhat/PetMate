@@ -1,14 +1,14 @@
 import 'package:flutter/foundation.dart';
 
-import '../../../core/errors/failures.dart';
-import '../../../core/enums/energy_level.dart';
-import '../../../core/enums/pet_gender.dart';
-import '../../../core/enums/pet_type.dart';
-import '../domain/entities/pet.dart';
-import '../domain/usecases/create_pet.dart';
-import '../domain/usecases/delete_pet.dart';
-import '../domain/usecases/get_my_pets.dart';
-import '../domain/usecases/update_pet.dart';
+import '../../../../core/enums/energy_level.dart';
+import '../../../../core/enums/pet_gender.dart';
+import '../../../../core/enums/pet_type.dart';
+import '../../../../core/errors/failures.dart';
+import '../../domain/entities/pet.dart';
+import '../../domain/usecases/create_pet.dart';
+import '../../domain/usecases/delete_pet.dart';
+import '../../domain/usecases/get_my_pets.dart';
+import '../../domain/usecases/update_pet.dart';
 
 /// Manages pet list/profile UI state.
 class PetController extends ChangeNotifier {
@@ -61,6 +61,8 @@ class PetController extends ChangeNotifier {
     EnergyLevel? energyLevel,
     String? bio,
     List<String>? photos,
+    bool isVaccinated = false,
+    bool isNeutered = false,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -75,8 +77,54 @@ class PetController extends ChangeNotifier {
         energyLevel: energyLevel,
         bio: bio,
         photos: photos,
+        isVaccinated: isVaccinated,
+        isNeutered: isNeutered,
       );
       _pets = [..._pets, pet];
+      return true;
+    } on Failure catch (failure) {
+      _errorMessage = failure.message;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Replaces an existing pet (full PUT on the backend) and updates the list.
+  Future<bool> updatePet({
+    required String petId,
+    required String name,
+    required PetType type,
+    required PetGender gender,
+    String? breed,
+    required int ageYears,
+    EnergyLevel? energyLevel,
+    String? bio,
+    List<String>? photos,
+    bool? isVaccinated,
+    bool? isNeutered,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final pet = await _updatePet(
+        petId: petId,
+        name: name,
+        type: type,
+        gender: gender,
+        breed: breed,
+        ageYears: ageYears,
+        energyLevel: energyLevel,
+        bio: bio,
+        photos: photos,
+        isVaccinated: isVaccinated,
+        isNeutered: isNeutered,
+      );
+      _pets = [
+        for (final existing in _pets) existing.id == pet.id ? pet : existing,
+      ];
       return true;
     } on Failure catch (failure) {
       _errorMessage = failure.message;

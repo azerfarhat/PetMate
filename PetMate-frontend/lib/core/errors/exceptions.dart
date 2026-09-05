@@ -8,8 +8,6 @@
 /// Exceptions are a lower-level mechanism used by datasources and infrastructure.
 library;
 
-import 'package:flutter/foundation.dart';
-
 /// Base exception for the application.
 class AppException implements Exception {
   const AppException(this.message);

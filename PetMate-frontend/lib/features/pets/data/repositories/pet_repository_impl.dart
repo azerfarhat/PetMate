@@ -1,11 +1,11 @@
-import '../../../core/enums/energy_level.dart';
-import '../../../core/enums/pet_gender.dart';
-import '../../../core/enums/pet_type.dart';
+import '../../../../core/enums/energy_level.dart';
+import '../../../../core/enums/pet_gender.dart';
+import '../../../../core/enums/pet_type.dart';
 import '../../domain/entities/pet.dart';
 import '../../domain/repositories/pet_repository.dart';
 import '../datasources/pet_remote_data_source.dart';
-import '../dtos/create_pet_request_dto.dart';
-import '../dtos/update_pet_request_dto.dart';
+import '../dtos/pet_request_dto.dart';
+import '../dtos/photo_request_dto.dart';
 import '../mappers/pet_mapper.dart';
 
 /// Implementation of [PetRepository].
@@ -45,17 +45,17 @@ class PetRepositoryImpl implements PetRepository {
     bool isVaccinated = false,
     bool isNeutered = false,
   }) async {
-    final request = CreatePetRequestDto(
+    final request = PetRequestDto(
       name: name,
       type: type,
       gender: gender,
       breed: breed,
-      ageYears: ageYears,
+      age: ageYears,
       energyLevel: energyLevel,
-      bio: bio,
-      photos: photos ?? const [],
-      isVaccinated: isVaccinated,
-      isNeutered: isNeutered,
+      description: bio,
+      vaccinated: isVaccinated,
+      neutered: isNeutered,
+      photos: (photos ?? const []).map((url) => PhotoRequestDto(url: url)).toList(),
     );
     final dto = await _remoteDataSource.createPet(request);
     return PetMapper.toEntity(dto);
@@ -64,24 +64,28 @@ class PetRepositoryImpl implements PetRepository {
   @override
   Future<Pet> updatePet({
     required String petId,
-    String? name,
+    required String name,
+    required PetType type,
+    required PetGender gender,
     String? breed,
-    int? ageYears,
+    required int ageYears,
     EnergyLevel? energyLevel,
     String? bio,
     List<String>? photos,
     bool? isVaccinated,
     bool? isNeutered,
   }) async {
-    final request = UpdatePetRequestDto(
+    final request = PetRequestDto(
       name: name,
+      type: type,
+      gender: gender,
       breed: breed,
-      ageYears: ageYears,
+      age: ageYears,
       energyLevel: energyLevel,
-      bio: bio,
-      photos: photos,
-      isVaccinated: isVaccinated,
-      isNeutered: isNeutered,
+      description: bio,
+      vaccinated: isVaccinated,
+      neutered: isNeutered,
+      photos: (photos ?? const []).map((url) => PhotoRequestDto(url: url)).toList(),
     );
     final dto = await _remoteDataSource.updatePet(petId, request);
     return PetMapper.toEntity(dto);

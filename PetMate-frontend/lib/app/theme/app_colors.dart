@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'app_colors.dart';
-
 /// Centralized color configuration for PawMate.
 ///
 /// All visual configuration lives here so that colors are never hardcoded

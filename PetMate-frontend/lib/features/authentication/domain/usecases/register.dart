@@ -10,12 +10,14 @@ class Register {
   Future<AuthSession> call({
     required String email,
     required String password,
-    required String displayName,
+    required String firstName,
+    required String lastName,
   }) {
     return _repository.register(
       email: email,
       password: password,
-      displayName: displayName,
+      firstName: firstName,
+      lastName: lastName,
     );
   }
 }

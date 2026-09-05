@@ -1,3 +1,4 @@
+import '../../../pets/domain/entities/pet.dart';
 import '../entities/user_profile.dart';
 
 /// Repository contract for user profile data.
@@ -8,11 +9,18 @@ abstract interface class UserProfileRepository {
   /// Fetches the profile of any user by id (e.g. a match).
   Future<UserProfile> getUserProfile(String userId);
 
-  /// Updates the current user's profile.
+  /// Replaces the current user's profile.
+  ///
+  /// The backend PUT is a full replacement, so the first name, last name and
+  /// the complete list of pets are always required.
   Future<UserProfile> updateProfile({
-    String? displayName,
+    required String firstName,
+    required String lastName,
+    String? profilePicture,
     String? bio,
-    String? avatarUrl,
-    DateTime? dateOfBirth,
+    required List<Pet> pets,
+    double? latitude,
+    double? longitude,
+    int? searchRadius,
   });
 }

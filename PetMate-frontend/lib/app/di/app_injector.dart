@@ -9,6 +9,21 @@ import '../../features/authentication/domain/usecases/login.dart';
 import '../../features/authentication/domain/usecases/logout.dart';
 import '../../features/authentication/domain/usecases/register.dart';
 import '../../features/authentication/presentation/controllers/auth_controller.dart';
+import '../../features/user_profile/data/datasources/user_profile_remote_data_source.dart';
+import '../../features/user_profile/data/repositories/user_profile_repository_impl.dart';
+import '../../features/user_profile/domain/repositories/user_profile_repository.dart';
+import '../../features/user_profile/domain/usecases/get_my_profile.dart';
+import '../../features/user_profile/domain/usecases/update_user_profile.dart';
+import '../../features/user_profile/presentation/controllers/user_profile_controller.dart';
+import '../../features/pets/data/datasources/pet_remote_data_source.dart';
+import '../../features/pets/data/repositories/pet_repository_impl.dart';
+import '../../features/pets/domain/repositories/pet_repository.dart';
+import '../../features/pets/domain/usecases/update_pet.dart';
+import '../../features/pets/domain/usecases/create_pet.dart';
+import '../../features/pets/domain/usecases/get_my_pets.dart';
+import '../../features/pets/domain/usecases/get_pet.dart';
+import '../../features/pets/domain/usecases/get_user_pets.dart';
+import '../../features/pets/domain/usecases/delete_pet.dart';
 
 /// Manual dependency-injection container (composition root).
 ///
@@ -32,9 +47,16 @@ class AppInjector {
   );
 
   // ---- Authentication ------------------------------------------------------
+  late final UserProfileRemoteDataSource userProfileRemoteDataSource =
+      UserProfileRemoteDataSource(apiClient);
+
+  late final UserProfileRepository userProfileRepository =
+      UserProfileRepositoryImpl(userProfileRemoteDataSource);
+
   late final AuthRepository authRepository = AuthRepositoryImpl(
     AuthRemoteDataSource(apiClient),
     localStorage,
+    userProfileRemoteDataSource,
   );
 
   late final Login login = Login(authRepository);
@@ -47,6 +69,31 @@ class AppInjector {
     register: register,
     logout: logout,
     getCurrentUser: getCurrentUser,
+  );
+
+  // ---- Pets -----------------------------------------------------------------
+  late final PetRemoteDataSource petRemoteDataSource =
+      PetRemoteDataSource(apiClient);
+
+  late final PetRepository petRepository =
+      PetRepositoryImpl(petRemoteDataSource);
+
+  late final GetMyPets getMyPets = GetMyPets(petRepository);
+  late final GetUserPets getUserPets = GetUserPets(petRepository);
+  late final GetPet getPet = GetPet(petRepository);
+  late final CreatePet createPet = CreatePet(petRepository);
+  late final UpdatePet updatePet = UpdatePet(petRepository);
+  late final DeletePet deletePet = DeletePet(petRepository);
+
+  // ---- User profile ---------------------------------------------------------
+  late final GetMyProfile getMyProfile = GetMyProfile(userProfileRepository);
+  late final UpdateUserProfile updateUserProfile =
+      UpdateUserProfile(userProfileRepository);
+
+  late final UserProfileController userProfileController =
+      UserProfileController(
+    getMyProfile: getMyProfile,
+    updateUserProfile: updateUserProfile,
   );
 }
 

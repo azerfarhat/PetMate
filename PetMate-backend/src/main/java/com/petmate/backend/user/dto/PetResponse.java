@@ -11,6 +11,7 @@ import java.util.List;
  */
 public record PetResponse(
         Long id,
+        Long ownerId,
         String name,
         PetType type,
         String breed,

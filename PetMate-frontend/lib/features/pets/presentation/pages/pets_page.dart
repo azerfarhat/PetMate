@@ -49,7 +49,7 @@ class _PetsPageState extends State<PetsPage> {
           }
           final error = widget.controller.errorMessage;
           if (error != null && widget.controller.pets.isEmpty) {
-            return ErrorWidget(
+            return ErrorView(
               message: error,
               onRetry: widget.controller.loadMyPets,
             );
@@ -65,7 +65,7 @@ class _PetsPageState extends State<PetsPage> {
           return ListView.separated(
             padding: const EdgeInsets.all(AppDimensions.s4),
             itemCount: widget.controller.pets.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 const SizedBox(height: AppDimensions.s2),
             itemBuilder: (context, index) {
               final pet = widget.controller.pets[index];

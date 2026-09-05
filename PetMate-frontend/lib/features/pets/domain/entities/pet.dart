@@ -1,8 +1,12 @@
-import '../../../core/enums/energy_level.dart';
-import '../../../core/enums/pet_gender.dart';
-import '../../../core/enums/pet_type.dart';
+import '../../../../core/enums/energy_level.dart';
+import '../../../../core/enums/pet_gender.dart';
+import '../../../../core/enums/pet_type.dart';
 
 /// A pet owned by a user in the Domain layer.
+///
+/// Field naming follows the app's vocabulary (`ageYears`, `bio`, `photos` as
+/// URL strings); the Data layer translates the backend wire contract into
+/// this shape via [PetMapper].
 class Pet {
   const Pet({
     required this.id,
@@ -17,7 +21,6 @@ class Pet {
     this.photos = const [],
     this.isVaccinated = false,
     this.isNeutered = false,
-    this.createdAt,
   });
 
   final String id;
@@ -32,5 +35,4 @@ class Pet {
   final List<String> photos;
   final bool isVaccinated;
   final bool isNeutered;
-  final DateTime? createdAt;
 }

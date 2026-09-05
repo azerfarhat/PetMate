@@ -1,13 +1,14 @@
 /// Type of pet.
+///
+/// Values follow the backend contract (`PetType`), which currently supports
+/// dogs, cats, birds, rabbits, hamsters and a generic `OTHER` fallback.
 enum PetType {
-  dog('dog'),
-  cat('cat'),
-  bird('bird'),
-  rabbit('rabbit'),
-  fish('fish'),
-  hamster('hamster'),
-  reptile('reptile'),
-  other('other');
+  dog('DOG'),
+  cat('CAT'),
+  bird('BIRD'),
+  rabbit('RABBIT'),
+  hamster('HAMSTER'),
+  other('OTHER');
 
   const PetType(this.value);
 

@@ -1,6 +1,7 @@
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
 import '../dtos/user_profile_dto.dart';
+import '../dtos/user_profile_update_request_dto.dart';
 
 /// Remote datasource for user profiles.
 ///
@@ -11,7 +12,7 @@ class UserProfileRemoteDataSource {
   final ApiClient _apiClient;
 
   Future<UserProfileDto> getMyProfile() async {
-    final response = await _apiClient.get(ApiConstants.usersBasePath);
+    final response = await _apiClient.get(ApiConstants.currentUserEndpoint);
     return UserProfileDto.fromJson(response as Map<String, dynamic>);
   }
 
@@ -22,10 +23,10 @@ class UserProfileRemoteDataSource {
     return UserProfileDto.fromJson(response as Map<String, dynamic>);
   }
 
-  Future<UserProfileDto> updateProfile(Map<String, dynamic> body) async {
-    final response = await _apiClient.patch(
-      ApiConstants.usersBasePath,
-      body: body,
+  Future<UserProfileDto> updateProfile(UserProfileUpdateRequestDto dto) async {
+    final response = await _apiClient.put(
+      ApiConstants.currentUserEndpoint,
+      body: dto.toJson(),
     );
     return UserProfileDto.fromJson(response as Map<String, dynamic>);
   }

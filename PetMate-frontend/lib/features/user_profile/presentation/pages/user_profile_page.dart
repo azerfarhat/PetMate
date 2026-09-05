@@ -48,14 +48,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
           }
           final error = widget.controller.errorMessage;
           if (error != null && widget.controller.profile == null) {
-            return ErrorWidget(
+            return ErrorView(
               message: error,
               onRetry: widget.controller.loadProfile,
             );
           }
           final profile = widget.controller.profile;
           if (profile == null) {
-            return const ErrorWidget(message: 'Unable to load your profile.');
+            return const ErrorView(message: 'Unable to load your profile.');
           }
           return _buildProfile(profile);
         },

@@ -16,7 +16,8 @@ abstract interface class AuthRepository {
   Future<AuthSession> register({
     required String email,
     required String password,
-    required String displayName,
+    required String firstName,
+    required String lastName,
   });
 
   /// Logs the current user out and clears the local session.

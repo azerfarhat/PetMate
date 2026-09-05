@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
 
-import '../../../core/errors/failures.dart';
-import '../../../core/utils/validators.dart';
-import '../domain/entities/auth_user.dart';
-import '../domain/usecases/get_current_user.dart';
-import '../domain/usecases/login.dart';
-import '../domain/usecases/logout.dart';
-import '../domain/usecases/register.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/validators.dart';
+import '../../domain/entities/auth_user.dart';
+import '../../domain/usecases/get_current_user.dart';
+import '../../domain/usecases/login.dart';
+import '../../domain/usecases/logout.dart';
+import '../../domain/usecases/register.dart';
 
 /// Manages authentication UI state.
 ///
@@ -71,11 +71,14 @@ class AuthController extends ChangeNotifier {
   Future<bool> register({
     required String email,
     required String password,
-    required String displayName,
+    required String firstName,
+    required String lastName,
   }) async {
     final emailError = Validators.email(email);
     final passwordError = Validators.password(password);
-    final nameError = Validators.required(displayName);
+    final firstNameError = Validators.required(firstName);
+    final lastNameError = Validators.required(lastName);
+    final nameError = firstNameError ?? lastNameError;
     if (emailError != null || passwordError != null || nameError != null) {
       _errorMessage = emailError ?? passwordError ?? nameError;
       notifyListeners();
@@ -87,7 +90,8 @@ class AuthController extends ChangeNotifier {
       final session = await _register(
         email: email,
         password: password,
-        displayName: displayName,
+        firstName: firstName,
+        lastName: lastName,
       );
       _user = session.user;
       _isAuthenticated = true;

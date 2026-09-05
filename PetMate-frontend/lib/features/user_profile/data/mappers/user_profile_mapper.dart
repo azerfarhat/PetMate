@@ -8,15 +8,17 @@ abstract final class UserProfileMapper {
   static UserProfile toEntity(UserProfileDto dto) {
     return UserProfile(
       id: dto.id,
-      displayName: dto.displayName,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      profilePicture: dto.profilePicture,
       bio: dto.bio,
-      avatarUrl: dto.avatarUrl,
-      city: dto.city,
-      dateOfBirth: dto.dateOfBirth != null
-          ? DateTime.tryParse(dto.dateOfBirth!)
-          : null,
-      isVerified: dto.isVerified,
-      joinedAt: dto.joinedAt != null ? DateTime.tryParse(dto.joinedAt!) : null,
+      latitude: dto.latitude,
+      longitude: dto.longitude,
+      searchRadius: dto.searchRadius,
+      isVerified: dto.emailVerified,
+      createdAt: dto.createdAt != null ? DateTime.tryParse(dto.createdAt!) : null,
+      updatedAt: dto.updatedAt != null ? DateTime.tryParse(dto.updatedAt!) : null,
     );
   }
 }
