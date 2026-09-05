@@ -3,6 +3,7 @@ package com.petmate.backend.messaging.websocket;
 import com.petmate.backend.enums.NotificationType;
 import com.petmate.backend.messaging.MessagePublishedEvent;
 import com.petmate.backend.messaging.dto.MessageResponse;
+import com.petmate.backend.messaging.dto.TypingStatus;
 import com.petmate.backend.notification.dto.NotificationResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,5 +71,16 @@ class MessageEventPublisherTest {
 
         verify(messagingTemplate).convertAndSendToUser(eq("1"), eq(CONVERSATION_QUEUE), eq(message));
         verify(messagingTemplate, never()).convertAndSendToUser(eq("2"), anyString(), any());
+    }
+
+    @Test
+    void publishTyping_sendsStatusOnlyToRecipientQueue() {
+        publisher.publishTyping(100L, 1L, 2L, true);
+
+        verify(messagingTemplate).convertAndSendToUser(
+                eq("2"),
+                eq("/queue/conversations.100.typing"),
+                eq(new TypingStatus(100L, 1L, true)));
+        verify(messagingTemplate, never()).convertAndSendToUser(eq("1"), anyString(), any());
     }
 }

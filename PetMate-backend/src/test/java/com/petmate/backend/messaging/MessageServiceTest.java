@@ -11,8 +11,10 @@ import com.petmate.backend.enums.MatchStatus;
 import com.petmate.backend.enums.NotificationType;
 import com.petmate.backend.exception.ConversationNotFoundException;
 import com.petmate.backend.messaging.dto.ConversationResponse;
+import com.petmate.backend.messaging.dto.MessagePageResponse;
 import com.petmate.backend.messaging.dto.MessageResponse;
 import com.petmate.backend.messaging.dto.SendMessageRequest;
+import com.petmate.backend.messaging.websocket.MessageEventPublisher;
 import com.petmate.backend.repository.BlockRepository;
 import com.petmate.backend.repository.ConversationRepository;
 import com.petmate.backend.repository.MessageRepository;
@@ -37,6 +39,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -66,6 +70,8 @@ class MessageServiceTest {
     @Mock
     private PetPhotoRepository petPhotoRepository;
     @Mock
+    private MessageEventPublisher messageEventPublisher;
+    @Mock
     private ApplicationEventPublisher applicationEventPublisher;
 
     private MessageService messageService;
@@ -79,7 +85,8 @@ class MessageServiceTest {
     @BeforeEach
     void setUp() {
         messageService = new MessageService(conversationRepository, messageRepository,
-                notificationRepository, blockRepository, petPhotoRepository, applicationEventPublisher);
+                notificationRepository, blockRepository, petPhotoRepository,
+                messageEventPublisher, applicationEventPublisher);
         me = user(ME, "Jane");
         other = user(OTHER, "Bob");
         myPet = pet(11L, me, "Rex");
@@ -222,29 +229,102 @@ class MessageServiceTest {
     }
 
     @Test
-    void getMessages_returnsHistoryForParticipant() {
+    void getMessagePage_returnsNewestPageWithCursorAndHasMore() {
         when(conversationRepository.findByIdWithParticipants(CONVERSATION_ID)).thenReturn(Optional.of(conversation));
-        Message hello = message(1L, other, "Coucou", LocalDateTime.now().minusMinutes(5), true);
-        when(messageRepository.findPageByConversationIdWithSender(eq(CONVERSATION_ID), any(Pageable.class)))
-                .thenReturn(List.of(hello));
+        LocalDateTime t = LocalDateTime.now();
+        Message m1 = message(1L, other, "Premier", t.minusMinutes(10), true);
+        Message m2 = message(2L, me, "Deuxième", t.minusMinutes(5), true);
+        Message m3 = message(3L, other, "Troisième", t, false);
+        when(messageRepository.findNewestPage(eq(CONVERSATION_ID), any(Pageable.class)))
+                .thenReturn(List.of(m3, m2, m1, message(0L, other, "Encore plus vieux", t.minusMinutes(15), true)));
 
-        List<MessageResponse> result = messageService.getMessages(ME, CONVERSATION_ID, 50, 0);
+        MessagePageResponse result = messageService.getMessagePage(ME, CONVERSATION_ID, 3, null);
 
-        assertEquals(1, result.size());
-        assertEquals(1L, result.get(0).id());
-        assertEquals(OTHER, result.get(0).senderId());
-        assertEquals("Coucou", result.get(0).content());
-        assertTrue(result.get(0).read());
+        assertEquals(3, result.messages().size());
+        assertEquals(1L, result.messages().get(0).id());
+        assertEquals(3L, result.messages().get(2).id());
+        assertTrue(result.hasMore());
+        assertEquals(1L, result.nextCursor());
     }
 
     @Test
-    void getMessages_byNonParticipant_throwsNotFound() {
+    void getMessagePage_withCursorReturnsOlderMessages() {
+        when(conversationRepository.findByIdWithParticipants(CONVERSATION_ID)).thenReturn(Optional.of(conversation));
+        LocalDateTime t = LocalDateTime.now();
+        List<Message> older = List.of(
+                message(5L, other, "Cinq", t.minusMinutes(20), true),
+                message(6L, me, "Six", t.minusMinutes(15), true));
+        when(messageRepository.findOlderThan(eq(CONVERSATION_ID), eq(10L), any(Pageable.class)))
+                .thenReturn(older);
+
+        MessagePageResponse result = messageService.getMessagePage(ME, CONVERSATION_ID, 50, 10L);
+
+        assertEquals(2, result.messages().size());
+        assertEquals(5L, result.messages().get(0).id());
+        assertEquals(6L, result.messages().get(1).id());
+        assertEquals(5L, result.nextCursor());
+    }
+
+    @Test
+    void getMessagePage_clampsLimitToMaximumPageSize() {
+        when(conversationRepository.findByIdWithParticipants(CONVERSATION_ID)).thenReturn(Optional.of(conversation));
+        when(messageRepository.findNewestPage(eq(CONVERSATION_ID), any(Pageable.class)))
+                .thenReturn(List.of());
+
+        MessagePageResponse result = messageService.getMessagePage(ME, CONVERSATION_ID, 500, null);
+
+        verify(messageRepository).findNewestPage(eq(CONVERSATION_ID), argThat(
+                pageable -> pageable.getPageSize() == 51));
+        assertTrue(result.messages().isEmpty());
+    }
+
+    @Test
+    void getMessagePage_byNonParticipant_throwsNotFoundAndQueriesNothing() {
         Conversation foreign = conversation(200L, match(user(3L, "Eve"), other, pet(31L, null, "Nix"), otherPet, MatchStatus.MATCHED));
         when(conversationRepository.findByIdWithParticipants(200L)).thenReturn(Optional.of(foreign));
 
         assertThrows(ConversationNotFoundException.class,
-                () -> messageService.getMessages(ME, 200L, 50, 0));
-        verify(messageRepository, never()).findPageByConversationIdWithSender(any(), any());
+                () -> messageService.getMessagePage(ME, 200L, 50, null));
+        verify(messageRepository, never()).findNewestPage(any(), any());
+        verify(messageRepository, never()).findOlderThan(any(), any(), any());
+    }
+
+    @Test
+    void getMessagePage_unknownConversation_throwsNotFound() {
+        when(conversationRepository.findByIdWithParticipants(CONVERSATION_ID)).thenReturn(Optional.empty());
+
+        assertThrows(ConversationNotFoundException.class,
+                () -> messageService.getMessagePage(ME, CONVERSATION_ID, 50, null));
+    }
+
+    @Test
+    void typing_publishesOnlyToOpponent() {
+        when(conversationRepository.findByIdWithParticipants(CONVERSATION_ID)).thenReturn(Optional.of(conversation));
+        when(blockRepository.existBetweenOwners(ME, OTHER)).thenReturn(false);
+
+        messageService.typing(ME, CONVERSATION_ID, true);
+
+        verify(messageEventPublisher).publishTyping(CONVERSATION_ID, ME, OTHER, true);
+    }
+
+    @Test
+    void typing_byNonParticipant_throwsNotFoundAndPublishesNothing() {
+        Conversation foreign = conversation(200L, match(user(3L, "Eve"), other, pet(31L, null, "Nix"), otherPet, MatchStatus.MATCHED));
+        when(conversationRepository.findByIdWithParticipants(200L)).thenReturn(Optional.of(foreign));
+
+        assertThrows(ConversationNotFoundException.class,
+                () -> messageService.typing(ME, 200L, true));
+        verify(messageEventPublisher, never()).publishTyping(any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void typing_whenBlocked_throwsNotFoundAndPublishesNothing() {
+        when(conversationRepository.findByIdWithParticipants(CONVERSATION_ID)).thenReturn(Optional.of(conversation));
+        when(blockRepository.existBetweenOwners(ME, OTHER)).thenReturn(true);
+
+        assertThrows(ConversationNotFoundException.class,
+                () -> messageService.typing(ME, CONVERSATION_ID, true));
+        verify(messageEventPublisher, never()).publishTyping(any(), any(), any(), anyBoolean());
     }
 
     @Test

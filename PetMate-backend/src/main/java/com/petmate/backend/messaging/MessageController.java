@@ -1,8 +1,10 @@
 package com.petmate.backend.messaging;
 
 import com.petmate.backend.messaging.dto.ConversationResponse;
+import com.petmate.backend.messaging.dto.MessagePageResponse;
 import com.petmate.backend.messaging.dto.MessageResponse;
 import com.petmate.backend.messaging.dto.SendMessageRequest;
+import com.petmate.backend.messaging.dto.TypingRequest;
 import com.petmate.backend.security.AuthUserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -45,15 +47,18 @@ public class MessageController {
     }
 
     /**
-     * Historique d'une conversation, paginé par date d'envoi.
+     * Historique d'une conversation, paginé par curseur keyset. Sans
+     * {@code beforeId}, la page la plus récente est retournée ; sinon les
+     * messages strictement antérieurs au curseur. La taille est plafonnée à 50.
      */
     @GetMapping("/{conversationId}/messages")
-    public ResponseEntity<List<MessageResponse>> messages(
+    public ResponseEntity<MessagePageResponse> messages(
             Authentication authentication,
             @PathVariable("conversationId") Long conversationId,
             @RequestParam(defaultValue = "50") int limit,
-            @RequestParam(defaultValue = "0") int offset) {
-        return ResponseEntity.ok(messageService.getMessages(userId(authentication), conversationId, limit, offset));
+            @RequestParam(value = "beforeId", required = false) Long beforeId) {
+        return ResponseEntity.ok(
+                messageService.getMessagePage(userId(authentication), conversationId, limit, beforeId));
     }
 
     /**
@@ -65,6 +70,18 @@ public class MessageController {
             @PathVariable("conversationId") Long conversationId,
             @Valid @RequestBody SendMessageRequest request) {
         return ResponseEntity.ok(messageService.sendMessage(userId(authentication), conversationId, request));
+    }
+
+    /**
+     * Signal "en train d'écrire", diffusé en temps réel à l'interlocuteur.
+     * Transitoire et non persisté.
+     */
+    @PostMapping("/{conversationId}/typing")
+    public ResponseEntity<Void> typing(Authentication authentication,
+                                       @PathVariable("conversationId") Long conversationId,
+                                       @Valid @RequestBody TypingRequest request) {
+        messageService.typing(userId(authentication), conversationId, request.typing());
+        return ResponseEntity.noContent().build();
     }
 
     /**

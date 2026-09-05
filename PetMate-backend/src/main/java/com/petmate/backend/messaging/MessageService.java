@@ -11,8 +11,10 @@ import com.petmate.backend.enums.MatchStatus;
 import com.petmate.backend.enums.NotificationType;
 import com.petmate.backend.exception.ConversationNotFoundException;
 import com.petmate.backend.messaging.dto.ConversationResponse;
+import com.petmate.backend.messaging.dto.MessagePageResponse;
 import com.petmate.backend.messaging.dto.MessageResponse;
 import com.petmate.backend.messaging.dto.SendMessageRequest;
+import com.petmate.backend.messaging.websocket.MessageEventPublisher;
 import com.petmate.backend.notification.dto.NotificationResponse;
 import com.petmate.backend.repository.BlockRepository;
 import com.petmate.backend.repository.ConversationRepository;
@@ -28,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -58,6 +61,7 @@ public class MessageService {
     private final NotificationRepository notificationRepository;
     private final BlockRepository blockRepository;
     private final PetPhotoRepository petPhotoRepository;
+    private final MessageEventPublisher messageEventPublisher;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     public MessageService(ConversationRepository conversationRepository,
@@ -65,12 +69,14 @@ public class MessageService {
                           NotificationRepository notificationRepository,
                           BlockRepository blockRepository,
                           PetPhotoRepository petPhotoRepository,
+                          MessageEventPublisher messageEventPublisher,
                           ApplicationEventPublisher applicationEventPublisher) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.notificationRepository = notificationRepository;
         this.blockRepository = blockRepository;
         this.petPhotoRepository = petPhotoRepository;
+        this.messageEventPublisher = messageEventPublisher;
         this.applicationEventPublisher = applicationEventPublisher;
     }
 
@@ -99,16 +105,44 @@ public class MessageService {
     }
 
     /**
-     * Historique d'une conversation, paginé par date d'envoi.
+     * Historique d'une conversation, paginé par curseur (keyset). Retourne la
+     * page la plus récente, ou les messages strictement antérieurs à
+     * {@code beforeId} ; les messages de la page sont ordonnés chronologiquement
+     * et {@code nextCursor} pointe vers le plus ancien pour charger la suivante.
      */
     @Transactional(readOnly = true)
-    public List<MessageResponse> getMessages(Long userId, Long conversationId, int limit, int offset) {
+    public MessagePageResponse getMessagePage(Long userId, Long conversationId, int limit, Long beforeId) {
         requireAccessibleConversation(userId, conversationId);
-        return messageRepository.findPageByConversationIdWithSender(
-                        conversationId, PageRequest.of(pageOf(offset, limit), sizeOf(limit)))
-                .stream()
-                .map(this::toMessageResponse)
+        int pageSize = sizeOf(limit);
+        Pageable pageable = PageRequest.of(0, pageSize + 1);
+        List<Message> rows = beforeId == null
+                ? messageRepository.findNewestPage(conversationId, pageable)
+                : messageRepository.findOlderThan(conversationId, beforeId, pageable);
+
+        boolean hasMore = rows.size() > pageSize;
+        List<Message> page = rows.stream().limit(pageSize)
+                .sorted(Comparator.comparing(Message::getId))
                 .toList();
+        Long nextCursor = page.isEmpty() ? null : page.get(0).getId();
+
+        return new MessagePageResponse(
+                page.stream().map(this::toMessageResponse).toList(),
+                hasMore,
+                nextCursor);
+    }
+
+    /**
+     * Signal "en train d'écrire" : diffusé en temps réel à l'interlocuteur sur
+     * sa file personnelle. Rien n'est persisté ; le signal est transitoire.
+     */
+    @Transactional
+    public void typing(Long userId, Long conversationId, boolean typing) {
+        Conversation conversation = requireAccessibleConversation(userId, conversationId);
+        User recipient = opponent(conversation, userId);
+        if (blockRepository.existBetweenOwners(userId, recipient.getId())) {
+            throw new ConversationNotFoundException("Conversation introuvable");
+        }
+        messageEventPublisher.publishTyping(conversationId, userId, recipient.getId(), typing);
     }
 
     /**

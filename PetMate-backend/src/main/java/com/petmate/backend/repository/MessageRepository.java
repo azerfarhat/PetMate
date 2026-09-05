@@ -23,17 +23,33 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     int deleteByConversationId(@Param("conversationId") Long conversationId);
 
     /**
-     * Historique d'une conversation, paginé et trié par date d'envoi. L'expéditeur
-     * est chargé (fetch join) pour éviter le N+1 sur une page de messages.
+     * Page la plus récente de l'historique d'une conversation (keyset : les
+     * {@code limit} plus hauts identifiants). L'expéditeur est chargé en fetch
+     * join pour éviter le N+1. Tri par identifiant décroissant.
      */
     @Query("""
             SELECT m FROM Message m
             JOIN FETCH m.sender s
             WHERE m.conversation.id = :conversationId
-            ORDER BY m.sentAt ASC
+            ORDER BY m.id DESC
             """)
-    List<Message> findPageByConversationIdWithSender(@Param("conversationId") Long conversationId,
-                                                     Pageable pageable);
+    List<Message> findNewestPage(@Param("conversationId") Long conversationId,
+                                 Pageable pageable);
+
+    /**
+     * Messages strictement antérieurs à un curseur (keyset sur l'identifiant,
+     * insensible aux nouveaux messages arrivés entre deux chargements). Tri par
+     * identifiant décroissant.
+     */
+    @Query("""
+            SELECT m FROM Message m
+            JOIN FETCH m.sender s
+            WHERE m.conversation.id = :conversationId AND m.id < :beforeId
+            ORDER BY m.id DESC
+            """)
+    List<Message> findOlderThan(@Param("conversationId") Long conversationId,
+                                @Param("beforeId") Long beforeId,
+                                Pageable pageable);
 
     /**
      * Tous les messages d'un jeu de conversations (une page), en une seule
