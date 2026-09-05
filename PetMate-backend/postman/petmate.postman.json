@@ -1,0 +1,1099 @@
+{
+  "info": {
+    "name": "PetMate",
+    "description": "Collection complète de l'API PetMate (Spring Boot). Tous les endpoints REST actuels du backend, organisés par domaine.\n\n## Démarrage rapide (workflow recommandé)\n1. Importer ce fichier unique : il contient **tous les endpoints ET les variables** (collection autonome, aucun environnement à créer).\n2. Adapter les variables de collection (``baseUrl``, ``email``, ``password``, ``REGISTER_EMAIL``…) aux comptes à tester.\n3. Exécuter **1. Auth → Login** : les tokens sont sauvegardés automatiquement dans les variables de collection.\n3. Exécuter **2. Profil → GET /users/me** : ``myUserId`` et ``petId`` sont capturés automatiquement.\n4. Dérouler ensuite les dossiers dans l'ordre : Pets → Matching → Messagerie → Notifications → Blocages → Signalements → Uploads.\n\n## Notes importantes\n- L'envoi d'emails passe par un SMTP de dev (``localhost:1025``). Les liens/\"tokens\" (vérification email, reset de mot de passe, code 6 chiffres) sont visibles dans les logs du conteneur SMTP (MailHog : ``http://localhost:8025``) ou directement utilisables : ``POST /auth/verify-code`` avec le code à 6 chiffres.\n- **Inscription** : le backend exige au moins un ``pet`` (``pets @NotEmpty``) → un ``400`` sans pet est attendu. Le body fourni en contient un.\n- ``DELETE /users/me`` **supprime définitivement le compte** : à exécuter sur un compte jetable uniquement.\n- Les ids dynamiques (``petId``, ``otherUserId``, ``targetPetId``, ``matchId``, ``conversationId``, ``notificationId``) se remplissent automatiquement via les tests des requêtes précédentes. Ils restent modifiables dans les variables de collection.\n\n## Temps réel (WebSocket STOMP)\n- Endpoint : ``ws://localhost:8080/ws`` (SockJS/STOMP).\n- AUTH au CONNECT : header ``Authorization: Bearer <accessToken>`` (même JWT que REST).\n- Envoyer sur ``/app/typing`` : ``{\"conversationId\": <id>, \"typing\": true}``.\n- Recevoir sur ``/user/queue/conversations.{id}`` : messages poussés après envoi.\n- Recevoir sur ``/user/queue/conversations.{id}.typing`` : statut \"en train d'écrire\".\n- Recevoir sur ``/user/queue/notifications`` : événements de notifications.\nLes messages et le typing sont aussi testables 100% en REST (POST message / POST typing).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "email", "value": "azerr@gmail.com", "type": "string" },
+    { "key": "password", "value": "azerr@2026", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "myUserId", "value": "", "type": "string" },
+    { "key": "petId", "value": "", "type": "string" },
+    { "key": "otherUserId", "value": "", "type": "string" },
+    { "key": "targetPetId", "value": "", "type": "string" },
+    { "key": "matchId", "value": "", "type": "string" },
+    { "key": "conversationId", "value": "", "type": "string" },
+    { "key": "notificationId", "value": "", "type": "string" },
+    { "key": "VERIFY_CODE", "value": "123456", "type": "string" },
+    { "key": "VERIFY_TOKEN", "value": "PASTE_TOKEN_ICI", "type": "string" },
+    { "key": "RESET_TOKEN", "value": "PASTE_TOKEN_ICI", "type": "string" },
+    { "key": "NEW_PASSWORD", "value": "NewPass!123", "type": "string" },
+    { "key": "PASS_CODE", "value": "123456", "type": "string" },
+    { "key": "REGISTER_EMAIL", "value": "newuser@gmail.com", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "POST /auth/register (créer un compte)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jean\",\n  \"lastName\": \"Dupont\",\n  \"email\": \"{{REGISTER_EMAIL}}\",\n  \"password\": \"{{password}}\",\n  \"profilePicture\": \"\",\n  \"bio\": \"Amoureux des chiens\",\n  \"latitude\": 48.8566,\n  \"longitude\": 2.3522,\n  \"searchRadius\": 30,\n  \"pets\": [\n    {\n      \"name\": \"Rex\",\n      \"type\": \"DOG\",\n      \"breed\": \"Labrador\",\n      \"gender\": \"MALE\",\n      \"age\": 3,\n      \"energyLevel\": \"HIGH\",\n      \"description\": \"Très joueur\",\n      \"vaccinated\": true,\n      \"neutered\": false,\n      \"photos\": [\n        { \"url\": \"https://example.com/rex.jpg\", \"primaryPhoto\": true, \"displayOrder\": 0 }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /auth/verify-email?token=",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-email?token={{VERIFY_TOKEN}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-email"],
+              "query": [
+                { "key": "token", "value": "{{VERIFY_TOKEN}}" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/verify-code (code 6 chiffres)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Vérification OK\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-code",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-code"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{VERIFY_CODE}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/resend-verification",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/resend-verification",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "resend-verification"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{REGISTER_EMAIL}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/login (sauvegarde les tokens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login 200 + tokens\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const data = pm.response.json();",
+                  "  pm.expect(data.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', data.refreshToken);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"rememberMe\": false\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/forgot-password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "forgot-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/reset-password (token par email)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "reset-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{RESET_TOKEN}}\",\n  \"newPassword\": \"{{NEW_PASSWORD}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Refresh OK\", function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('accessToken', pm.response.json().accessToken);",
+                  "pm.collectionVariables.set('refreshToken', pm.response.json().refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Profil et compte (Bearer)",
+      "item": [
+        {
+          "name": "GET /users/me (capture myUserId + petId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Profil OK\", function () { pm.response.to.have.status(200); });",
+                  "const me = pm.response.json();",
+                  "pm.collectionVariables.set('myUserId', String(me.id));",
+                  "if (me.pets && me.pets.length > 0) {",
+                  "  pm.collectionVariables.set('petId', String(me.pets[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /users/{userId} (profil public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Profil public\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{otherUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{otherUserId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /users/me (mise à jour profil + pets)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jean\",\n  \"lastName\": \"Dupont\",\n  \"profilePicture\": \"\",\n  \"bio\": \"Modifié via Postman\",\n  \"latitude\": 48.8566,\n  \"longitude\": 2.3522,\n  \"searchRadius\": 30,\n  \"pets\": [\n    {\n      \"id\": {{petId}},\n      \"name\": \"Rex\",\n      \"type\": \"DOG\",\n      \"breed\": \"Labrador\",\n      \"gender\": \"MALE\",\n      \"age\": 3,\n      \"energyLevel\": \"HIGH\",\n      \"description\": \"Très joueur\",\n      \"vaccinated\": true,\n      \"neutered\": false,\n      \"photos\": []\n    }\n  ]\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /users/me/password/request (envoie code)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/password/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "password", "request"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /users/me/password (code + nouveau mot de passe)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/password",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{PASS_CODE}}\",\n  \"newPassword\": \"{{NEW_PASSWORD}}\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /users/me (SUPPRIME LE COMPTE !)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Pets (Bearer)",
+      "item": [
+        {
+          "name": "GET /pets (mes pets)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pets",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /pets?owner_id={userId} (pets publics d'un autre)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Pets publics\", function () { pm.response.to.have.status(200); });",
+                  "const pets = pm.response.json();",
+                  "if (pets.length > 0) { pm.collectionVariables.set('otherPetId', String(pets[0].id)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pets?owner_id={{otherUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets"],
+              "query": [
+                { "key": "owner_id", "value": "{{otherUserId}}" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /pets/{petId}",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /pets (créer un pet)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Pet créé\", function () { pm.response.to.have.status(201); });",
+                  "const created = pm.response.json();",
+                  "pm.collectionVariables.set('petId', String(created.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pets",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Luna\",\n  \"type\": \"CAT\",\n  \"breed\": \"Européen\",\n  \"gender\": \"FEMALE\",\n  \"age\": 2,\n  \"energyLevel\": \"MEDIUM\",\n  \"description\": \"Calme et indépendante\",\n  \"vaccinated\": true,\n  \"neutered\": true,\n  \"photos\": [\n    { \"url\": \"https://example.com/luna.jpg\", \"primaryPhoto\": true, \"displayOrder\": 0 }\n  ]\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT /pets/{petId}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Luna\",\n  \"type\": \"CAT\",\n  \"breed\": \"Européen\",\n  \"gender\": \"FEMALE\",\n  \"age\": 3,\n  \"energyLevel\": \"MEDIUM\",\n  \"description\": \"Mise à jour via Postman\",\n  \"vaccinated\": true,\n  \"neutered\": true,\n  \"photos\": []\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /pets/{petId}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Pet supprimé\", function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pets/{{petId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pets", "{{petId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Matching / Swipe (Bearer)",
+      "item": [
+        {
+          "name": "GET /match/candidates (feed de découverte)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Candidats OK\", function () { pm.response.to.have.status(200); });",
+                  "const candidates = pm.response.json();",
+                  "if (Array.isArray(candidates) && candidates.length > 0) {",
+                  "  pm.collectionVariables.set('targetPetId', String(candidates[0].petId));",
+                  "  if (!pm.collectionVariables.get('otherUserId')) {",
+                  "    pm.collectionVariables.set('otherUserId', String(candidates[0].owner.id));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/match/candidates?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["match", "candidates"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /match/swipe (LIKE / PASS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Swipe OK\", function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.matched) {",
+                  "  pm.collectionVariables.set('matchId', String(data.matchId));",
+                  "  pm.collectionVariables.set('conversationId', String(data.conversationId));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/match/swipe",
+              "host": ["{{baseUrl}}"],
+              "path": ["match", "swipe"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"LIKE\",\n  \"targetPetId\": {{targetPetId}}\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /match (mes matchs)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Matchs OK\", function () { pm.response.to.have.status(200); });",
+                  "const matches = pm.response.json();",
+                  "if (Array.isArray(matches) && matches.length > 0) {",
+                  "  pm.collectionVariables.set('matchId', String(matches[0].matchId));",
+                  "  pm.collectionVariables.set('conversationId', String(matches[0].conversationId));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/match",
+              "host": ["{{baseUrl}}"],
+              "path": ["match"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /match/{matchId} (unmatch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Unmatch OK\", function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/match/{{matchId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["match", "{{matchId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Messagerie (Bearer)",
+      "item": [
+        {
+          "name": "GET /conversations (capture conversationId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Conversations OK\", function () { pm.response.to.have.status(200); });",
+                  "const convos = pm.response.json();",
+                  "if (Array.isArray(convos) && convos.length > 0) {",
+                  "  pm.collectionVariables.set('conversationId', String(convos[0].conversationId));",
+                  "  pm.collectionVariables.set('otherUserId', String(convos[0].otherUserId));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /conversations/{id}/messages (pagination curseur)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Messages OK (MessagePageResponse)\", function () { pm.response.to.have.status(200); });",
+                  "const page = pm.response.json();",
+                  "pm.expect(page).to.have.property('messages');",
+                  "pm.expect(page).to.have.property('hasMore');",
+                  "pm.expect(page).to.have.property('nextCursor');",
+                  "if (page.nextCursor) { pm.collectionVariables.set('nextCursor', String(page.nextCursor)); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversationId}}/messages?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", "{{conversationId}}", "messages"],
+              "query": [
+                { "key": "limit", "value": "50" },
+                { "key": "beforeId", "value": "{{nextCursor}}", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /conversations/{id}/messages?beforeId= (page précédente)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversationId}}/messages?limit=50&beforeId={{nextCursor}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", "{{conversationId}}", "messages"],
+              "query": [
+                { "key": "limit", "value": "50" },
+                { "key": "beforeId", "value": "{{nextCursor}}" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /conversations/{id}/messages (envoyer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Message envoyé\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversationId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", "{{conversationId}}", "messages"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Coucou ! On se retrouve au parc ?\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /conversations/{id}/read (marquer lu)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Lecture marquée\", function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", "{{conversationId}}", "read"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /conversations/{id}/typing (en train d'écrire)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Signal typing accepté\", function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversationId}}/typing",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", "{{conversationId}}", "typing"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"typing\": true\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Notifications (Bearer)",
+      "item": [
+        {
+          "name": "GET /notifications (capture notificationId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Notifications OK\", function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.notifications && data.notifications.length > 0) {",
+                  "  pm.collectionVariables.set('notificationId', String(data.notifications[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /notifications/read (tout marquer lu)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Tout lu\", function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "read"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /notifications/{id}/read",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "{{notificationId}}", "read"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Blocages (Bearer)",
+      "item": [
+        {
+          "name": "GET /blocks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Blocages OK\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/blocks",
+              "host": ["{{baseUrl}}"],
+              "path": ["blocks"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /blocks/{userId} (bloquer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Bloqué\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/blocks/{{otherUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["blocks", "{{otherUserId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /blocks/{userId} (débloquer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Débloqué\", function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/blocks/{{otherUserId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["blocks", "{{otherUserId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. Signalements (Bearer)",
+      "item": [
+        {
+          "name": "POST /reports (signaler un utilisateur)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Signalement créé\", function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('reportId', String(pm.response.json().id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportedUserId\": {{otherUserId}},\n  \"reason\": \"INAPPROPRIATE_CONTENT\",\n  \"description\": \"Contenu inapproprié envoyé en message.\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /reports/my (mes signalements)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Signalements OK\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/my",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "my"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "9. Uploads (Bearer)",
+      "item": [
+        {
+          "name": "POST /uploads/presigned-url",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"URL pré-signée\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/presigned-url",
+              "host": ["{{baseUrl}}"],
+              "path": ["uploads", "presigned-url"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetId\": {{petId}},\n  \"targetType\": \"PET\",\n  \"contentType\": \"image/jpeg\",\n  \"contentLength\": 1048576\n}"
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
